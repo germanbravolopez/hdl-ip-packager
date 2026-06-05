@@ -6,6 +6,8 @@ output is captured with pytest's ``capsys``.
 
 from __future__ import annotations
 
+import sys
+
 import pytest
 
 from hdl_ip_packager import __version__, cli
@@ -95,6 +97,23 @@ def test_init_missing_required_field_returns_one(
     rc = cli.main(["init", str(tmp_path), "--vendor", "a", "--library", "b"])
     assert rc == 1
     assert "error:" in capsys.readouterr().err
+    assert not (tmp_path / "ip.toml").exists()
+
+
+def test_init_prompts_for_required_fields_when_interactive(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
+    answers = iter(["acme", "common", "fifo"])
+    monkeypatch.setattr("builtins.input", lambda prompt="": next(answers))
+    rc = cli.main(["init", str(tmp_path)])
+    assert rc == 0
+    assert (tmp_path / "ip.toml").exists()
+
+
+def test_init_interactive_blank_answer_still_fails(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr("builtins.input", lambda prompt="": "")
+    rc = cli.main(["init", str(tmp_path)])
+    assert rc == 1
     assert not (tmp_path / "ip.toml").exists()
 
 

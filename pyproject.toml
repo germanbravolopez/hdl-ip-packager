@@ -97,8 +97,10 @@ omit = ["*/__main__.py"]
 show_missing = true
 skip_covered = false
 # Fail CI if coverage of the implemented code regresses. Raise this number as
-# the implemented surface grows (see docs/ai_agent_instructions.md).
-fail_under = 85
+# the implemented surface grows (see docs/ai_agent_instructions.md). The suite
+# sits at ~96% today; keep a small buffer below that so a feature whose tests
+# land in the same change never trips the gate on a transient partial branch.
+fail_under = 93
 exclude_lines = [
     "pragma: no cover",
     "raise NotImplementedError",

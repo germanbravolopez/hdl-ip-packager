@@ -64,7 +64,6 @@ _None._
 | Issue | File | Notes |
 |-------|------|-------|
 | `hdlpkg tree` dependency view | `cli.py` | Pretty-print the dependency graph once the resolver (M1) exists. |
-| Coverage gate ratchet | `pyproject.toml` | Raise `fail_under` from 85 toward ~95 as the implemented surface grows; it sits at ~96% today. |
 | Pre-commit hooks (ruff + mypy) | `.pre-commit-config.yaml` | Run `ruff check` / `ruff format` / `mypy` on commit so issues are caught before CI. High value, low effort. |
 | Property-based tests (Hypothesis) | `tests/unit/`, dev extra | Excellent fit for `version.py`: invariants like `Version.parse(str(v)) == v` and "sorted order matches SemVer precedence", plus fuzzing the constraint grammar. |
 | Release automation (tag -> PyPI) | `.github/workflows/` | On an `X.Y.Z` tag: build wheel + sdist and publish to PyPI via OIDC trusted publishing (mirrors the reference project's tag-driven release). |
@@ -83,6 +82,17 @@ _None._
 ---
 
 ## Completed Milestones
+
+### Coverage gate ratchet — June 2026
+- [x] **Raised the coverage `fail_under` gate from 85 to 93.** With the implemented
+  surface now larger (and the `init` scaffolder added), the suite sits at ~96%, so
+  the old 85 floor no longer protected against regressions. Bumped `fail_under` to
+  93 in `[tool.coverage.report]`, keeping a small buffer below the live number so a
+  feature whose tests land in the same change is never tripped by a transient
+  partial branch. Also closed the last gaps in `cli.py` by covering the `init`
+  command's interactive-prompt path (both a successful prompt and a blank-answer
+  failure), via `monkeypatch` on `sys.stdin.isatty` + `builtins.input`. Files:
+  `pyproject.toml`, `tests/unit/test_cli.py`.
 
 ### `hdlpkg init` scaffolder — June 2026
 - [x] **`hdlpkg init` scaffolds a starter `ip.toml`.** Added a pure `scaffold.py`
