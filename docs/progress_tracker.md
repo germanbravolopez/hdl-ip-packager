@@ -25,8 +25,8 @@ unit-tested (108 passing tests, ~96% coverage):
 - **Identity** — `PackageRef` and `Vlnv` (`vendor:library:name:version`).
 - **Manifest** — `ip.toml` parsing/validation (`[package]`, `[dependencies]`,
   `[filesets]`, `[targets]`).
-- **CLI** — `hdlpkg info` and `hdlpkg validate` work; all other commands are wired
-  and report planned status.
+- **CLI** — `hdlpkg info`, `hdlpkg validate`, and `hdlpkg init` (scaffold a starter
+  `ip.toml`) work; all other commands are wired and report planned status.
 - **Tooling** — pytest (markers + coverage gate + foldable summary), ruff, mypy
   strict on `src/`, CI workflow, and a cross-platform test-summary renderer.
 
@@ -63,7 +63,6 @@ _None._
 
 | Issue | File | Notes |
 |-------|------|-------|
-| `hdlpkg init` scaffolder | `cli.py` | Generate a starter `ip.toml` from prompts/flags. Small, high-value DX win; can land before M1. |
 | `hdlpkg tree` dependency view | `cli.py` | Pretty-print the dependency graph once the resolver (M1) exists. |
 | Coverage gate ratchet | `pyproject.toml` | Raise `fail_under` from 85 toward ~95 as the implemented surface grows; it sits at ~96% today. |
 | Pre-commit hooks (ruff + mypy) | `.pre-commit-config.yaml` | Run `ruff check` / `ruff format` / `mypy` on commit so issues are caught before CI. High value, low effort. |
@@ -84,6 +83,24 @@ _None._
 ---
 
 ## Completed Milestones
+
+### `hdlpkg init` scaffolder — June 2026
+- [x] **`hdlpkg init` scaffolds a starter `ip.toml`.** Added a pure `scaffold.py`
+  module: a frozen `ScaffoldOptions` value type (identity validated by reusing
+  `PackageRef`/`Version`, `top` defaulting to the core name) and a `render_manifest`
+  function that emits a complete, valid manifest with one `rtl` fileset and one
+  `sim` target. The renderer is deliberately I/O-free and its output round-trips
+  through `Manifest`, so a freshly scaffolded core passes `hdlpkg validate`
+  immediately; a unit test asserts that invariant. The CLI `init` command (now a
+  real command, removed from the planned-stub list) is the thin I/O wrapper: it
+  takes `--vendor/--library/--name/--version/--description/--license/--top` flags
+  plus an optional target directory, prompts for the three required identity fields
+  only when stdin is a TTY (so CI/tests never block), refuses to overwrite an
+  existing `ip.toml` unless `--force` is given, and writes the file. Rationale: a
+  low-effort, high-value DX win that lets authors start a core without copying an
+  example by hand, and it lands cleanly before the M1 resolver. Files:
+  `src/hdl_ip_packager/scaffold.py`, `src/hdl_ip_packager/cli.py`,
+  `tests/unit/test_scaffold.py`, `tests/unit/test_cli.py`.
 
 ### Examples and developer experience — June 2026
 - [x] **Documentation site (MkDocs Material -> GitHub Pages).** Added `mkdocs.yml`

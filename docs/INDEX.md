@@ -26,6 +26,7 @@ quick-find reference.
 | Versioning (SemVer + constraints) | `src/hdl_ip_packager/version.py` | implemented |
 | Identity (VLNV) | `src/hdl_ip_packager/vlnv.py` | implemented |
 | Manifest (`ip.toml`) | `src/hdl_ip_packager/manifest.py` | implemented |
+| Scaffolder (`init`) | `src/hdl_ip_packager/scaffold.py` | implemented |
 | Exceptions | `src/hdl_ip_packager/exceptions.py` | implemented |
 | CLI (`hdlpkg`) | `src/hdl_ip_packager/cli.py` | implemented |
 | Public API | `src/hdl_ip_packager/__init__.py` | implemented |
@@ -54,6 +55,7 @@ quick-find reference.
 | `tests/unit/test_version.py` | SemVer parsing/precedence, constraint grammar, pre-release rules |
 | `tests/unit/test_vlnv.py` | `PackageRef` / `Vlnv` parse, validate, round-trip |
 | `tests/unit/test_manifest.py` | `ip.toml` happy paths + every validation error |
+| `tests/unit/test_scaffold.py` | `init` scaffolder: rendered manifest round-trips, validation errors |
 | `tests/unit/test_cli.py` | CLI commands, exit codes, output |
 | `tests/unit/test_planned_stubs.py` | Resolver/registry seams import and fail loudly |
 | `tests/unit/test_docs_site.py` | `mkdocs.yml` parses and every `nav` page exists under `docs/` |
@@ -66,7 +68,7 @@ quick-find reference.
 |---------|--------|---------|
 | `hdlpkg info [path]` | implemented | Print parsed identity, deps, filesets, targets |
 | `hdlpkg validate [path]` | implemented | Parse + validate a manifest (exit 0 if OK) |
-| `hdlpkg init` | planned | Scaffold a starter `ip.toml` |
+| `hdlpkg init [dir]` | implemented | Scaffold a starter `ip.toml` (flags or interactive prompts) |
 | `hdlpkg add <vlnv>` | planned | Add a dependency to `ip.toml` |
 | `hdlpkg resolve` | planned | Resolve deps, write `ip.lock` |
 | `hdlpkg install` | planned | Resolve + fetch into the cache |

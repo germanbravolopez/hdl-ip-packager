@@ -36,8 +36,9 @@ Implemented today:
   constraint grammar (`^`, `~`, `>=`, `<`, ranges, `*`) for dependency specs.
 - **Manifest (`ip.toml`)** — a TOML manifest per core declaring identity,
   metadata, filesets, dependencies, and build targets.
-- **CLI (`hdlpkg`)** — `info` and `validate` work today; the rest of the command
-  surface is wired and reports its planned status.
+- **CLI (`hdlpkg`)** — `info`, `validate`, and `init` (scaffold a starter
+  `ip.toml`) work today; the rest of the command surface is wired and reports its
+  planned status.
 
 Designed and on the roadmap (see the progress tracker):
 
@@ -70,6 +71,7 @@ This puts the `hdlpkg` command on your PATH and installs pytest, ruff, and mypy.
 
 ```powershell
 hdlpkg --help                 # show all commands
+hdlpkg init --vendor acme --library comm --name uart   # scaffold a starter ip.toml
 hdlpkg info ip.toml           # print the parsed identity, deps, filesets, targets
 hdlpkg validate ip.toml       # parse + validate a manifest (exit 0 if OK)
 python -m hdl_ip_packager info   # same CLI, invoked as a module

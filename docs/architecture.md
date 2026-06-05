@@ -42,8 +42,9 @@ All source lives under [src/hdl_ip_packager/](../src/hdl_ip_packager/).
 | Versioning | [version.py](../src/hdl_ip_packager/version.py) | implemented | SemVer 2.0.0 `Version` + `VersionConstraint` (parse, precedence, matching) |
 | Identity | [vlnv.py](../src/hdl_ip_packager/vlnv.py) | implemented | `PackageRef` (`vendor:library:name`) and `Vlnv` (+`:version`) |
 | Manifest | [manifest.py](../src/hdl_ip_packager/manifest.py) | implemented | Parse/validate `ip.toml` → `Manifest` (identity, deps, filesets, targets) |
+| Scaffolder | [scaffold.py](../src/hdl_ip_packager/scaffold.py) | implemented | Pure renderer for a starter `ip.toml` (behind `hdlpkg init`) |
 | Errors | [exceptions.py](../src/hdl_ip_packager/exceptions.py) | implemented | One exception hierarchy rooted at `HdlPackagerError` |
-| CLI | [cli.py](../src/hdl_ip_packager/cli.py) | implemented | `hdlpkg` entry point; `info`/`validate` work, rest are wired stubs |
+| CLI | [cli.py](../src/hdl_ip_packager/cli.py) | implemented | `hdlpkg` entry point; `info`/`validate`/`init` work, rest are wired stubs |
 | Resolver | [resolver.py](../src/hdl_ip_packager/resolver.py) | planned | Constraints → one concrete `Vlnv` per package |
 | Registry/Cache | [registry.py](../src/hdl_ip_packager/registry.py) | planned | Abstract `Registry`; local/Git/HTTP/OCI backends + content-addressed cache |
 
@@ -51,11 +52,12 @@ The dependency direction is strictly one-way and acyclic:
 
 ```
 exceptions  ← version ← vlnv ← manifest ← {resolver, cli}
-                                   ↑
-                              registry (planned)
+                          ↑        ↑
+                       scaffold    registry (planned)
 ```
 
-`version`, `vlnv`, and `manifest` are **pure** (no I/O, no globals). That purity
+`scaffold` is pure too (it renders a manifest string from `version`/`vlnv` and is
+consumed by `cli`). `version`, `vlnv`, and `manifest` are **pure** (no I/O, no globals). That purity
 is deliberate: it is what makes them exhaustively unit-testable and is the model
 every new module should follow (see [ai_agent_instructions.md](./ai_agent_instructions.md)).
 

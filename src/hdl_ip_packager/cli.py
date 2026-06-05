@@ -16,13 +16,13 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from . import __version__
-from .exceptions import HdlPackagerError
+from .exceptions import HdlPackagerError, ManifestError
 from .manifest import MANIFEST_FILENAME, Manifest
+from .scaffold import DEFAULT_VERSION, ScaffoldOptions, render_manifest
 
 # Commands that have a real implementation today. Everything else is a planned
 # stub (see docs/progress_tracker.md) and reports as much instead of pretending.
 _PLANNED = {
-    "init": "scaffold a new ip.toml in the current directory",
     "add": "add a dependency to ip.toml",
     "resolve": "resolve dependencies and write the lockfile (ip.lock)",
     "install": "resolve + fetch dependencies into the local cache",
@@ -56,6 +56,27 @@ def build_parser() -> argparse.ArgumentParser:
     p_validate.add_argument("path", nargs="?", default=MANIFEST_FILENAME)
     p_validate.set_defaults(func=_cmd_validate)
 
+    p_init = sub.add_parser("init", help=f"scaffold a starter {MANIFEST_FILENAME}")
+    p_init.add_argument(
+        "directory",
+        nargs="?",
+        default=".",
+        help="directory to create the manifest in (default: current directory)",
+    )
+    p_init.add_argument("--vendor", help="VLNV vendor segment")
+    p_init.add_argument("--library", help="VLNV library segment")
+    p_init.add_argument("--name", help="VLNV name segment")
+    p_init.add_argument(
+        "--version", default=DEFAULT_VERSION, help=f"SemVer (default: {DEFAULT_VERSION})"
+    )
+    p_init.add_argument("--description", default="", help="short core description")
+    p_init.add_argument("--license", default="", help="SPDX license identifier")
+    p_init.add_argument("--top", help="top-level unit (default: the core name)")
+    p_init.add_argument(
+        "--force", action="store_true", help=f"overwrite an existing {MANIFEST_FILENAME}"
+    )
+    p_init.set_defaults(func=_cmd_init)
+
     for name, help_text in _PLANNED.items():
         p = sub.add_parser(name, help=f"[planned] {help_text}")
         p.set_defaults(func=_cmd_planned, command_name=name)
@@ -88,6 +109,45 @@ def _cmd_info(args: argparse.Namespace) -> int:
 def _cmd_validate(args: argparse.Namespace) -> int:
     manifest = _load(args.path)
     print(f"OK: {manifest.vlnv} is a valid manifest.")
+    return 0
+
+
+def _require_field(value: str | None, label: str, interactive: bool) -> str:
+    """Return *value*, prompting for it when interactive, else raise."""
+    if value:
+        return value
+    if interactive:
+        entered = input(f"{label}: ").strip()
+        if entered:
+            return entered
+    raise ManifestError(f"Missing required field '{label}'; pass --{label} or run interactively.")
+
+
+def _cmd_init(args: argparse.Namespace) -> int:
+    target_dir = Path(args.directory)
+    manifest_path = target_dir / MANIFEST_FILENAME
+    if manifest_path.exists() and not args.force:
+        print(
+            f"error: {manifest_path} already exists; pass --force to overwrite.",
+            file=sys.stderr,
+        )
+        return 1
+
+    interactive = sys.stdin.isatty()
+    options = ScaffoldOptions.create(
+        vendor=_require_field(args.vendor, "vendor", interactive),
+        library=_require_field(args.library, "library", interactive),
+        name=_require_field(args.name, "name", interactive),
+        version=args.version,
+        description=args.description,
+        license=args.license,
+        top=args.top,
+    )
+
+    target_dir.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(render_manifest(options), encoding="utf-8")
+    vlnv = options.vlnv
+    print(f"Created {manifest_path} for {vlnv}")
     return 0
 
 

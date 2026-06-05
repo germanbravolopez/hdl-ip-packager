@@ -58,6 +58,46 @@ def test_missing_manifest_file_returns_one(capsys: pytest.CaptureFixture[str]) -
     assert "error:" in capsys.readouterr().err
 
 
+def test_init_creates_valid_manifest(tmp_path, capsys: pytest.CaptureFixture[str]) -> None:
+    rc = cli.main(
+        ["init", str(tmp_path), "--vendor", "acme", "--library", "common", "--name", "fifo"]
+    )
+    assert rc == 0
+    assert "Created" in capsys.readouterr().out
+    manifest_path = tmp_path / "ip.toml"
+    assert manifest_path.exists()
+    # The scaffolded manifest must itself validate.
+    assert cli.main(["validate", str(manifest_path)]) == 0
+
+
+def test_init_refuses_overwrite_without_force(tmp_path, capsys: pytest.CaptureFixture[str]) -> None:
+    (tmp_path / "ip.toml").write_text("existing", encoding="utf-8")
+    rc = cli.main(["init", str(tmp_path), "--vendor", "a", "--library", "b", "--name", "c"])
+    assert rc == 1
+    assert "already exists" in capsys.readouterr().err
+    # The pre-existing file is left untouched.
+    assert (tmp_path / "ip.toml").read_text(encoding="utf-8") == "existing"
+
+
+def test_init_force_overwrites(tmp_path) -> None:
+    (tmp_path / "ip.toml").write_text("existing", encoding="utf-8")
+    rc = cli.main(
+        ["init", str(tmp_path), "--vendor", "a", "--library", "b", "--name", "c", "--force"]
+    )
+    assert rc == 0
+    assert "existing" not in (tmp_path / "ip.toml").read_text(encoding="utf-8")
+
+
+def test_init_missing_required_field_returns_one(
+    tmp_path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Non-interactive (captured stdin) with no --name: fails instead of hanging.
+    rc = cli.main(["init", str(tmp_path), "--vendor", "a", "--library", "b"])
+    assert rc == 1
+    assert "error:" in capsys.readouterr().err
+    assert not (tmp_path / "ip.toml").exists()
+
+
 @pytest.mark.parametrize("command", ["resolve", "install", "pack", "publish", "pull"])
 def test_planned_commands_report_not_implemented(
     command: str, capsys: pytest.CaptureFixture[str]
