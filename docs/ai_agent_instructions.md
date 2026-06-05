@@ -43,6 +43,8 @@ truth for what is done versus planned.
   ruff format --check .        # formatting
   mypy                         # strict typing on src/
   ```
+  Optionally `pre-commit install` to run ruff + mypy automatically on each commit
+  (config in `.pre-commit-config.yaml`).
 
 ## File map — where to find what
 

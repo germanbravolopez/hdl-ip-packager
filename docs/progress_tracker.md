@@ -64,7 +64,6 @@ _None._
 | Issue | File | Notes |
 |-------|------|-------|
 | `hdlpkg tree` dependency view | `cli.py` | Pretty-print the dependency graph once the resolver (M1) exists. |
-| Pre-commit hooks (ruff + mypy) | `.pre-commit-config.yaml` | Run `ruff check` / `ruff format` / `mypy` on commit so issues are caught before CI. High value, low effort. |
 | Property-based tests (Hypothesis) | `tests/unit/`, dev extra | Excellent fit for `version.py`: invariants like `Version.parse(str(v)) == v` and "sorted order matches SemVer precedence", plus fuzzing the constraint grammar. |
 | Release automation (tag -> PyPI) | `.github/workflows/` | On an `X.Y.Z` tag: build wheel + sdist and publish to PyPI via OIDC trusted publishing (mirrors the reference project's tag-driven release). |
 
@@ -82,6 +81,20 @@ _None._
 ---
 
 ## Completed Milestones
+
+### Pre-commit hooks — June 2026
+- [x] **Added `.pre-commit-config.yaml` mirroring the CI gates.** Contributors can
+  now run `pre-commit install` to catch ruff (lint + format) and mypy (strict on
+  `src/`) failures on `git commit`, before CI. The mypy hook uses
+  `pass_filenames: false` + `args: [src]` so it always checks the whole library
+  tree exactly as CI does, rather than per-file fragments; tool rules stay in
+  `pyproject.toml` and the pinned hook revs track the floors in the `dev` extra.
+  Also wired standard hygiene hooks (trailing-whitespace, end-of-file-fixer,
+  check-yaml/-toml, check-merge-conflict, check-added-large-files). Added
+  `pre-commit` to the `dev` extra and a `tests/unit/test_precommit_config.py`
+  integrity test that parses the config and asserts the CI-mirroring hooks are
+  present (so a typo can't silently disable the local gates). Files:
+  `.pre-commit-config.yaml`, `pyproject.toml`, `tests/unit/test_precommit_config.py`.
 
 ### Coverage gate ratchet — June 2026
 - [x] **Raised the coverage `fail_under` gate from 85 to 93.** With the implemented

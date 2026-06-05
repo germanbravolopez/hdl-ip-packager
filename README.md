@@ -65,7 +65,12 @@ Designed and on the roadmap (see the progress tracker):
 python -m pip install -e ".[dev]"
 ```
 
-This puts the `hdlpkg` command on your PATH and installs pytest, ruff, and mypy.
+This puts the `hdlpkg` command on your PATH and installs pytest, ruff, mypy, and
+pre-commit. Enable the local git hooks (ruff + mypy on commit) once with:
+
+```powershell
+pre-commit install
+```
 
 ## Usage
 
@@ -163,7 +168,8 @@ commit directly to `main`.** Work happens on a branch and merges via pull reques
    checklist (`docs/progress_tracker.md`, `docs/architecture.md`, `docs/INDEX.md`,
    and this README if user-visible behaviour changed).
 3. Before merging, the branch must be green: `pytest`, `ruff check .`, and
-   `mypy` all pass.
+   `mypy` all pass. The pre-commit hooks (`pre-commit install`) run ruff + mypy on
+   each commit so these are caught locally before CI.
 4. Open a PR into `main` and merge with a merge commit.
 
 See [docs/ai_agent_instructions.md](./docs/ai_agent_instructions.md) for the full

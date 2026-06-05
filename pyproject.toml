@@ -35,7 +35,8 @@ dev = [
     "pytest-randomly>=3.15",   # shuffles test order to surface inter-test coupling
     "ruff>=0.6",               # linter + formatter
     "mypy>=1.11",              # static type checker
-    "pyyaml>=6.0",             # used by the mkdocs.yml nav-integrity test
+    "pre-commit>=3.7",         # runs ruff + mypy as git hooks (.pre-commit-config.yaml)
+    "pyyaml>=6.0",             # used by the mkdocs.yml + pre-commit config integrity tests
 ]
 
 # Everything needed to build the documentation site. Install with:

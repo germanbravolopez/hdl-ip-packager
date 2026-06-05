@@ -1,0 +1,41 @@
+# Pre-commit hooks for the HDL IP Packager.
+#
+# These run the same gates as CI (.github/workflows/ci.yml) on `git commit`, so a
+# lint/format/type error is caught locally instead of after a push. Install once
+# per clone with:
+#
+#   pip install -e ".[dev]"
+#   pre-commit install
+#
+# Run against the whole tree on demand with `pre-commit run --all-files`. Tool
+# configuration (ruff rules, line length, mypy strictness) stays in pyproject.toml
+# -- the pinned versions here only need to track the floors in the `dev` extra.
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      # Lint (auto-fixing what is safe), then format -- mirrors `ruff check` +
+      # `ruff format` in CI.
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.2
+    hooks:
+      # Strict type-check the library only. `files`/`pass_filenames` keep the hook
+      # checking the whole src/ tree (as CI does) rather than per-file fragments.
+      - id: mypy
+        pass_filenames: false
+        args: [src]
+        files: ^src/
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
