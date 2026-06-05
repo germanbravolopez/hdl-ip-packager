@@ -40,6 +40,8 @@ quick-find reference.
 | `pyproject.toml` | Project metadata, deps, and all tool config (pytest, coverage, ruff, mypy) — single source of truth |
 | `scripts/render_test_summary.py` | Renders a foldable Markdown test report from JUnit XML into the GitHub step summary (and stdout locally) |
 | `.github/workflows/ci.yml` | CI: pytest + coverage + ruff + mypy across Python 3.11/3.12, renders the test summary |
+| `mkdocs.yml` | MkDocs Material config for the docs site (nav over `docs/`, theme, validation) |
+| `.github/workflows/docs.yml` | Builds the MkDocs site and publishes it to GitHub Pages on push to `main` |
 | `.gitignore` / `.gitattributes` | Ignore rules (incl. `.hdlpkg/` cache) + line-ending normalization |
 | `.claude/commands/` | Slash-command skills (`/coding-guidelines`, `/update-docs`, `/tackle-issue`) |
 | `examples/` | Bundled example IP cores (`fifo`, `uart`) with real `ip.toml` manifests + HDL |
@@ -54,6 +56,7 @@ quick-find reference.
 | `tests/unit/test_manifest.py` | `ip.toml` happy paths + every validation error |
 | `tests/unit/test_cli.py` | CLI commands, exit codes, output |
 | `tests/unit/test_planned_stubs.py` | Resolver/registry seams import and fail loudly |
+| `tests/unit/test_docs_site.py` | `mkdocs.yml` parses and every `nav` page exists under `docs/` |
 | `tests/integration/test_manifest_cli_flow.py` | Manifest-on-disk → CLI end to end |
 | `tests/integration/test_examples.py` | Bundled `examples/` cores validate, file paths exist, deps stay in-tree |
 

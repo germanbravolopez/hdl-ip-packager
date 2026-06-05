@@ -69,7 +69,6 @@ _None._
 | Pre-commit hooks (ruff + mypy) | `.pre-commit-config.yaml` | Run `ruff check` / `ruff format` / `mypy` on commit so issues are caught before CI. High value, low effort. |
 | Property-based tests (Hypothesis) | `tests/unit/`, dev extra | Excellent fit for `version.py`: invariants like `Version.parse(str(v)) == v` and "sorted order matches SemVer precedence", plus fuzzing the constraint grammar. |
 | Release automation (tag -> PyPI) | `.github/workflows/` | On an `X.Y.Z` tag: build wheel + sdist and publish to PyPI via OIDC trusted publishing (mirrors the reference project's tag-driven release). |
-| Docs site (MkDocs Material -> GitHub Pages) | `mkdocs.yml`, `.github/workflows/` | Auto-build and publish `docs/` to GitHub Pages on push to `main`. |
 
 ---
 
@@ -87,6 +86,21 @@ _None._
 ## Completed Milestones
 
 ### Examples and developer experience — June 2026
+- [x] **Documentation site (MkDocs Material -> GitHub Pages).** Added `mkdocs.yml`
+  (Material theme, light/dark toggle, search, the `docs/` tree as nav) and a `docs`
+  optional-dependency group (`mkdocs-material`). A new `.github/workflows/docs.yml`
+  builds the site and publishes it to GitHub Pages on push to `main` using the
+  official Pages flow (`upload-pages-artifact` + `deploy-pages`, with
+  `pages: write` + `id-token: write` and a `pages` concurrency group); it requires
+  the repo's Pages source set to "GitHub Actions". The config is deliberately kept
+  free of `!!python/name:` tags so `tests/unit/test_docs_site.py` can `safe_load`
+  it and assert every `nav` page exists, catching a renamed/removed doc before it
+  breaks the published site (`pyyaml` added to the dev extras for that test). Cross
+  -repo links to `src/` and root files render as build warnings (not errors) via
+  the `validation` settings, so a plain `mkdocs build` stays green; making those
+  links resolve on the site is deferred. Files: `mkdocs.yml`,
+  `.github/workflows/docs.yml`, `pyproject.toml`, `tests/unit/test_docs_site.py`,
+  `.gitignore`.
 - [x] **Bundled example IP cores under `examples/`.** Added two real cores with
   valid `ip.toml` manifests: `acme:common:fifo:1.0.0` (a synchronous FWFT FIFO,
   leaf) and `acme:comm:uart:1.2.0` (an 8N1 UART whose receive path buffers bytes

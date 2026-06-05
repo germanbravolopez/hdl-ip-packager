@@ -131,7 +131,15 @@ summary into the GitHub Actions run page.
 
 ## Documentation
 
-Full technical documentation lives in [`docs/`](./docs/README.md).
+Full technical documentation lives in [`docs/`](./docs/README.md) and is published
+as a site at <https://germanbravolopez.github.io/hdl-ip-packager/> (built from
+`docs/` by [`.github/workflows/docs.yml`](./.github/workflows/docs.yml) on every
+push to `main`). To preview it locally:
+
+```powershell
+pip install -e ".[docs]"
+mkdocs serve
+```
 
 | Document | Description |
 |----------|-------------|

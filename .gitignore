@@ -47,6 +47,9 @@ gen/
 work/
 *.ipkg
 
+# MkDocs build output (the docs site is published by CI, never committed).
+site/
+
 # --------------------------------------------------------------------------- #
 # Editor / OS                                                                  #
 # --------------------------------------------------------------------------- #

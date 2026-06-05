@@ -1,0 +1,69 @@
+# MkDocs configuration for the HDL IP Packager documentation site.
+#
+# Builds the docs/ tree into a static site (Material theme) that the Docs
+# workflow publishes to GitHub Pages on push to main. Kept free of
+# `!!python/name:` tags so the config is plain YAML (safe_load-able) and the
+# nav-integrity test in tests/unit/test_docs_site.py can validate it.
+site_name: HDL IP Packager
+site_description: An IP packager and dependency manager for HDL design reuse.
+site_url: https://germanbravolopez.github.io/hdl-ip-packager/
+repo_url: https://github.com/germanbravolopez/hdl-ip-packager
+repo_name: germanbravolopez/hdl-ip-packager
+edit_uri: edit/main/docs/
+copyright: Copyright &copy; German Bravo Lopez
+
+docs_dir: docs
+
+# Pages referencing files outside docs_dir (../README.md, ../CLAUDE.md, ...) are
+# expected and only warned about, so a plain `mkdocs build` stays green without
+# rewriting those cross-repo links to absolute URLs.
+validation:
+  nav:
+    omitted_files: info
+  links:
+    not_found: warn
+    absolute_links: ignore
+    unrecognized_links: ignore
+
+theme:
+  name: material
+  features:
+    - navigation.top
+    - navigation.instant
+    - navigation.tracking
+    - content.code.copy
+    - search.suggest
+    - search.highlight
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+
+nav:
+  - Home: README.md
+  - Onboarding: ai_agent_instructions.md
+  - Architecture: architecture.md
+  - Roadmap & status: progress_tracker.md
+  - Research: research/state_of_the_art.md
+  - Index: INDEX.md

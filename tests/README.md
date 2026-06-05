@@ -14,7 +14,8 @@ tests/
 │   ├── test_vlnv.py
 │   ├── test_manifest.py
 │   ├── test_cli.py
-│   └── test_planned_stubs.py
+│   ├── test_planned_stubs.py
+│   └── test_docs_site.py       mkdocs.yml parses + every nav page exists
 └── integration/                multi-module / filesystem tests            - marker: integration
     ├── test_manifest_cli_flow.py
     └── test_examples.py         validates the bundled examples/ cores
