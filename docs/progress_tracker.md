@@ -18,7 +18,7 @@ them to Archive. Convert relative dates to absolute (e.g. "June 2026").
 
 **Active branch**: `main`
 
-**Version**: `0.3.0` — cache + registries + `install` (M3+M4); see the Release plan.
+**Version**: `0.4.0` — packaging + pack/publish/pull (M5); see the Release plan.
 
 **Stage**: Foundation. The pure core is implemented, fully typed, linted, and
 unit-tested (151 passing tests, ~96% coverage):
@@ -127,6 +127,12 @@ _None._
 ---
 
 ## Completed Milestones
+
+### Release 0.4.0 — June 2026
+- [x] **Tagged `0.4.0`** per the Release plan: the full producer/consumer loop — a
+  deterministic `.ipkg`, append-only `publish` (with `yank`), and `pull` by VLNV —
+  works against a local registry, with the cache/lockfile pinning the packed-content
+  digest. Bumped `pyproject.toml` + `__init__.py`.
 
 ### M5 — `pack` / `publish` / `pull` (+ `.ipkg`, yank) — June 2026
 - [x] **Implemented packaging and the distribution commands.** New `packaging.py`
