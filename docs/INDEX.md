@@ -31,7 +31,7 @@ quick-find reference.
 | CLI (`hdlpkg`) | `src/hdl_ip_packager/cli.py` | implemented |
 | Public API | `src/hdl_ip_packager/__init__.py` | implemented |
 | `python -m` shim | `src/hdl_ip_packager/__main__.py` | implemented |
-| Resolver | `src/hdl_ip_packager/resolver.py` | planned (seam) |
+| Resolver | `src/hdl_ip_packager/resolver.py` | implemented |
 | Registry / cache | `src/hdl_ip_packager/registry.py` | planned (seam) |
 
 ## Tooling & build files
@@ -61,7 +61,8 @@ quick-find reference.
 | `tests/unit/test_manifest.py` | `ip.toml` happy paths + every validation error |
 | `tests/unit/test_scaffold.py` | `init` scaffolder: rendered manifest round-trips, validation errors |
 | `tests/unit/test_cli.py` | CLI commands, exit codes, output |
-| `tests/unit/test_planned_stubs.py` | Resolver/registry seams import and fail loudly |
+| `tests/unit/test_resolver.py` | Dependency resolver: newest-compatible, transitive, diamond, conflict, pre-release, backtracking |
+| `tests/unit/test_planned_stubs.py` | Registry seam imports and fails loudly |
 | `tests/unit/test_docs_site.py` | `mkdocs.yml` parses and every `nav` page exists under `docs/` |
 | `tests/unit/test_precommit_config.py` | `.pre-commit-config.yaml` parses and keeps the CI-mirroring hooks |
 | `tests/unit/test_check_release_version.py` | Release version guard: tag-to-version parsing + tag/package match check |

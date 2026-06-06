@@ -45,7 +45,7 @@ All source lives under [src/hdl_ip_packager/](../src/hdl_ip_packager/).
 | Scaffolder | [scaffold.py](../src/hdl_ip_packager/scaffold.py) | implemented | Pure renderer for a starter `ip.toml` (behind `hdlpkg init`) |
 | Errors | [exceptions.py](../src/hdl_ip_packager/exceptions.py) | implemented | One exception hierarchy rooted at `HdlPackagerError` |
 | CLI | [cli.py](../src/hdl_ip_packager/cli.py) | implemented | `hdlpkg` entry point; `info`/`validate`/`init` work, rest are wired stubs |
-| Resolver | [resolver.py](../src/hdl_ip_packager/resolver.py) | planned | Constraints → one concrete `Vlnv` per package |
+| Resolver | [resolver.py](../src/hdl_ip_packager/resolver.py) | implemented | Constraints → one concrete `Vlnv` per package (backtracking, newest-compatible) |
 | Registry/Cache | [registry.py](../src/hdl_ip_packager/registry.py) | planned | Abstract `Registry`; local/Git/HTTP/OCI backends + content-addressed cache |
 
 The dependency direction is strictly one-way and acyclic:
@@ -110,14 +110,21 @@ verifiable builds (the Cargo/Orbit/Go model).
 
 ## 4. Subsystems to be built (design intent)
 
-### Resolver *(planned — [resolver.py](../src/hdl_ip_packager/resolver.py))*
-Input: the root `Manifest` + the versions each package offers (from a registry).
-Output: a `Resolution` = one `Vlnv` per package satisfying every constraint.
+### Resolver *(implemented — [resolver.py](../src/hdl_ip_packager/resolver.py))*
+Input: the root `Manifest` + `available: Mapping[PackageRef, Sequence[Manifest]]`
+(the *manifests* of each package's known versions, so a candidate's own
+`[dependencies]` drive the transitive solve). Output: a `Resolution` = one `Vlnv`
+per package satisfying every constraint.
 - **Single version per package**, fail-on-conflict — HDL elaboration cannot host
   two versions of the same module (unlike npm's nesting).
-- **Newest-compatible** selection; exclude pre-releases unless requested.
-- Start with backtracking search over candidate sets; lower to a SAT/CDCL solver
-  as graphs grow (version selection is NP-complete in general).
+- **Newest-compatible** selection; pre-releases excluded unless a constraint's
+  operand is itself a pre-release of the same core (the `VersionConstraint` rule).
+- **Backtracking search** over candidate sets (newest-first, constraints
+  accumulate as dependents are chosen; a candidate that conflicts with an
+  already-chosen version is rejected and the search falls back to older versions).
+  Pure, so it does no I/O; the registry/cache layer supplies `available`. Can be
+  lowered to a SAT/CDCL solver later without changing the contract (version
+  selection is NP-complete in general).
 
 ### Registry & cache *(planned — [registry.py](../src/hdl_ip_packager/registry.py))*
 `Registry` is an ABC with `versions()`, `fetch()`, `publish()` so multiple

@@ -27,12 +27,15 @@ unit-tested (151 passing tests, ~96% coverage):
 - **Identity** — `PackageRef` and `Vlnv` (`vendor:library:name:version`).
 - **Manifest** — `ip.toml` parsing/validation (`[package]`, `[dependencies]`,
   `[filesets]`, `[targets]`).
+- **Resolver** — backtracking, newest-compatible dependency resolution (one `Vlnv`
+  per package, fail-on-conflict); pure, fed by an in-memory version index until a
+  registry (M4) supplies it.
 - **CLI** — `hdlpkg info`, `hdlpkg validate`, and `hdlpkg init` (scaffold a starter
   `ip.toml`) work; all other commands are wired and report planned status.
 - **Tooling** — pytest (markers + coverage gate + foldable summary), ruff, mypy
   strict on `src/`, CI workflow, and a cross-platform test-summary renderer.
 
-**Next**: implement the **Resolver** (see Roadmap M1).
+**Next**: implement the **Lockfile** (Roadmap M2); M1+M2 together ship as `0.2.0`.
 
 ---
 
@@ -44,7 +47,6 @@ unit-tested (151 passing tests, ~96% coverage):
 
 | # | Milestone | Scope | Key files |
 |---|-----------|-------|-----------|
-| M1 | **Dependency resolver** | Constraints → one `Vlnv` per package; newest-compatible; fail-on-conflict; backtracking now, SAT-ready later. | `resolver.py` |
 | M2 | **Lockfile (`ip.lock`)** | Serialize/verify a `Resolution` with per-core SHA-256 + source; read-back determinism. | `lockfile.py` (new) |
 | M3 | **Content-addressed cache** | Local store keyed by digest; verify-on-read; offline reuse. | `registry.py`/`cache.py` |
 | M4 | **Registry backends** | `Registry` impls: local dir, Git channel, HTTP index, **OCI artifact** registry. | `registry.py` |
@@ -119,6 +121,28 @@ _None._
 ---
 
 ## Completed Milestones
+
+### M1 — Dependency resolver — June 2026
+- [x] **Implemented the dependency resolver (`resolver.py`).** `resolve(root,
+  available)` turns the root manifest plus `available: Mapping[PackageRef,
+  Sequence[Manifest]]` (the manifests of each package's known versions) into a
+  `Resolution` = one concrete `Vlnv` per package. Algorithm: backtracking search
+  that picks the **newest** version satisfying every accumulated constraint,
+  follows each chosen candidate's own `[dependencies]` transitively, intersects
+  constraints on shared packages (diamonds), and falls back to older versions when
+  a newest-first choice makes a transitive constraint unsatisfiable. **Single
+  version per package**, fail-on-conflict (HDL can't elaborate two versions of a
+  module); pre-releases are excluded unless a constraint's operand is itself a
+  pre-release of the same core (reusing the `VersionConstraint` rule). The module
+  is pure (no I/O) — `available` is supplied by the caller, so a registry (M4) can
+  feed it later without changing the contract; `ResolutionError` names the
+  offending package, its constraints, and the versions on offer. Chose to key
+  `available` on full manifests rather than bare versions so transitive deps are
+  reachable without a separate lookup. Exposed `Resolution` + `resolve` from the
+  package API. The `resolve` CLI command stays a planned stub until M2 (lockfile)
+  gives it something to write. Files: `src/hdl_ip_packager/resolver.py`,
+  `src/hdl_ip_packager/__init__.py`, `tests/unit/test_resolver.py`,
+  `tests/unit/test_planned_stubs.py`.
 
 ### Release plan + first tag (0.1.0) — June 2026
 - [x] **Defined the pre-1.0 release plan and cut `0.1.0`.** Added a "Release plan"

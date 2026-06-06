@@ -1,24 +1,18 @@
-"""Smoke tests for the planned subsystems (resolver, registry).
+"""Smoke tests for the planned subsystems (registry).
 
 These modules are intentionally unimplemented, but they are part of the public
 package surface and their interfaces must import cleanly and fail loudly. Testing
-that contract now keeps the seams honest and counts them in coverage.
+that contract now keeps the seams honest and counts them in coverage. (The
+resolver is now implemented; its tests live in ``test_resolver.py``.)
 """
 
 from __future__ import annotations
 
 import pytest
 
-from hdl_ip_packager import registry, resolver
-from hdl_ip_packager.manifest import Manifest
+from hdl_ip_packager import registry
 
 pytestmark = pytest.mark.unit
-
-
-def test_resolve_is_not_implemented_yet(sample_manifest_toml: str) -> None:
-    manifest = Manifest.from_str(sample_manifest_toml)
-    with pytest.raises(NotImplementedError):
-        resolver.resolve(manifest, {})
 
 
 def test_registry_is_abstract() -> None:

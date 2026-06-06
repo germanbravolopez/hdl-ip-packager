@@ -21,6 +21,7 @@ from .exceptions import (
     ResolutionError,
 )
 from .manifest import Dependency, Fileset, Manifest, Target
+from .resolver import Resolution, resolve
 from .version import Version, VersionConstraint
 from .vlnv import PackageRef, Vlnv
 
@@ -37,10 +38,12 @@ __all__ = [
     "ManifestError",
     "PackageRef",
     "RegistryError",
+    "Resolution",
     "ResolutionError",
     "Target",
     "Version",
     "VersionConstraint",
     "Vlnv",
     "__version__",
+    "resolve",
 ]
