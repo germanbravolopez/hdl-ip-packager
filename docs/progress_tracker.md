@@ -41,13 +41,16 @@ unit-tested (151 passing tests, ~96% coverage):
   packed-content digest is what the cache and lockfile pin.
 - **Backends** — tool-flow generation (`backends/`): a pure EDAM-like intermediate
   (`build_eda_design`) feeding Verilator (`.vc`) and Vivado (`.tcl`) backends.
+- **IP-XACT** — IEEE 1685-2014 component export (`ipxact.py`: `to_ipxact`) behind
+  `hdlpkg export-ipxact`.
 - **CLI** — `info`/`validate`/`init`/`resolve`/`install`/`pack`/`publish`/`pull`/
-  `yank`/`gen`/`tree` work; `export-ipxact`/`add` are wired and report planned status.
+  `yank`/`gen`/`tree`/`export-ipxact` work; `add` is wired and reports planned status.
 - **Tooling** — pytest (markers + coverage gate + foldable summary), ruff, mypy
   strict on `src/`, CI workflow, and a cross-platform test-summary renderer.
 
-**Next**: implement **IP-XACT export** (Roadmap M7), which ships as `0.6.0`.
-(M6 tool-flow generation is implemented on `main`, awaiting the `0.5.0` release.)
+**Next**: implement **Supply-chain** signing + SBOM (Roadmap M8), the final
+milestone (gated for `1.0.0` per the Release plan, or `0.7.0` if formats still move).
+(M7 IP-XACT export is implemented on `main`, awaiting the `0.6.0` release.)
 
 ---
 
@@ -59,7 +62,6 @@ unit-tested (151 passing tests, ~96% coverage):
 
 | # | Milestone | Scope | Key files |
 |---|-----------|-------|-----------|
-| M7 | **IP-XACT export** | IEEE 1685 XML for Vivado/other-tool interop. | `ipxact.py` (new) |
 | M8 | **Supply-chain** | Sigstore (cosign) signing + SBOM at `pack` time. | `packaging.py` |
 
 ---
@@ -116,6 +118,7 @@ _None._
 | OCI artifact registry | `registry.py` | The differentiator backend: store/fetch cores as OCI artifacts (Docker-registry infra). Deferred from M4: needs a live OCI registry (or a mock) and the manifest/blob API; significant standalone work. |
 | Richer dependency fileset selection | `backends/edam.py` | M6 exports a dependency's `rtl` fileset (or all non-testbench, by name heuristic). Honor `Fileset.depend` and target-scoped fileset deps so a core can declare exactly which filesets it exposes to dependents, rather than relying on the `rtl`/`tb` naming convention. |
 | More tool-flow backends | `backends/` | M6 ships Verilator + Vivado. Add Icarus/Verilator-lint/GHDL (sim) and Quartus/Yosys (synth) backends behind the same `Backend` interface, plus per-target tool options (e.g. extra flags) in `[targets.*]`. |
+| Validate IP-XACT against the official XSD | `ipxact.py`, tests | M7 emits well-formed, structurally-conventional 1685-2014 XML but does not validate against the Accellera XSD. Add an (optional, dev-only) schema-validation test (e.g. `xmlschema`) so structural drift is caught; consider IP-XACT 2022 and richer mapping (bus interfaces, parameters). |
 
 ---
 
@@ -131,6 +134,25 @@ _None._
 ---
 
 ## Completed Milestones
+
+### M7 — IP-XACT (IEEE 1685) export — June 2026
+- [x] **Implemented IP-XACT export (`ipxact.py`) and wired `hdlpkg export-ipxact`.**
+  A pure `to_ipxact(manifest)` renders an IEEE **1685-2014** component XML from a
+  manifest: the VLNV identity, a `model` with one `view` + `componentInstantiation`
+  per `[targets.*]` (carrying the target's `moduleName` and `fileSetRef`s), and the
+  `fileSets` with each file's `fileType`. The manifest fileset `type` vocabulary
+  (`systemVerilogSource`/`verilogSource`/`vhdlSource`) already *is* the IP-XACT
+  `fileType` vocabulary, so it passes through unchanged. Built with stdlib
+  `xml.etree.ElementTree` (namespaced, `ET.indent`-formatted) for deterministic,
+  dependency-free output; the CLI `export-ipxact` command (removed from the planned
+  stubs) is the thin wrapper that writes the XML (default
+  `<vendor>.<library>.<name>.<version>.xml`). Output targets the 1685-2014 schema
+  and is well-formed and structurally conventional; validating against the official
+  Accellera XSD is **deferred** (new Open Non-Blocking Issue). Exposed
+  `to_ipxact`/`IPXACT_NAMESPACE`. Files: `src/hdl_ip_packager/ipxact.py`,
+  `src/hdl_ip_packager/cli.py`, `src/hdl_ip_packager/__init__.py`, `.gitignore`,
+  `tests/unit/test_ipxact.py`, `tests/integration/test_ipxact_cli.py`,
+  `tests/unit/test_cli.py`.
 
 ### Release 0.5.0 — June 2026
 - [x] **Tagged `0.5.0`** per the Release plan: tool-flow generation (M6) — `hdlpkg

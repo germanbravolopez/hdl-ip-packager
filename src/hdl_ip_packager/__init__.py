@@ -33,6 +33,7 @@ from .exceptions import (
     RegistryError,
     ResolutionError,
 )
+from .ipxact import IPXACT_NAMESPACE, to_ipxact
 from .lockfile import LockedPackage, Lockfile, sha256_digest
 from .manifest import Dependency, Fileset, Manifest, Target
 from .packaging import artifact_filename, extract_ipkg, manifest_from_ipkg, pack_core
@@ -51,6 +52,7 @@ from .vlnv import PackageRef, Vlnv
 __version__ = "0.5.0"
 
 __all__ = [
+    "IPXACT_NAMESPACE",
     "Backend",
     "BackendError",
     "ContentAddressedCache",
@@ -94,4 +96,5 @@ __all__ = [
     "resolve",
     "sha256_digest",
     "supported_toolflows",
+    "to_ipxact",
 ]

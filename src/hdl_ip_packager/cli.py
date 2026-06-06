@@ -19,6 +19,7 @@ from . import __version__
 from .backends import CoreSource, build_eda_design, get_backend
 from .cache import ContentAddressedCache, default_cache_root
 from .exceptions import BackendError, HdlPackagerError, ManifestError
+from .ipxact import to_ipxact
 from .lockfile import LOCKFILE_FILENAME, Lockfile, sha256_digest
 from .manifest import MANIFEST_FILENAME, Manifest
 from .packaging import artifact_filename, extract_ipkg, pack_core
@@ -33,7 +34,6 @@ from .vlnv import Vlnv
 # stub (see docs/progress_tracker.md) and reports as much instead of pretending.
 _PLANNED = {
     "add": "add a dependency to ip.toml",
-    "export-ipxact": "export an IP-XACT (IEEE 1685) description for tool interop",
 }
 
 
@@ -178,6 +178,17 @@ def build_parser() -> argparse.ArgumentParser:
         "manifest's parent directory)",
     )
     p_tree.set_defaults(func=_cmd_tree)
+
+    p_ipxact = sub.add_parser(
+        "export-ipxact", help="export an IP-XACT (IEEE 1685) component description"
+    )
+    p_ipxact.add_argument("path", nargs="?", default=MANIFEST_FILENAME, help="path to the manifest")
+    p_ipxact.add_argument(
+        "--output",
+        metavar="FILE",
+        help="output XML path (default: <vendor>.<library>.<name>.<version>.xml in the cwd)",
+    )
+    p_ipxact.set_defaults(func=_cmd_export_ipxact)
 
     for name, help_text in _PLANNED.items():
         p = sub.add_parser(name, help=f"[planned] {help_text}")
@@ -385,6 +396,19 @@ def _cmd_tree(args: argparse.Namespace) -> int:
     resolution, registry = _resolve_local(manifest_path, args.search)
     manifests = {vlnv.ref: registry.manifest(vlnv) for vlnv in resolution.vlnvs}
     print(render_dependency_tree(root, resolution.selected, manifests))
+    return 0
+
+
+def _cmd_export_ipxact(args: argparse.Namespace) -> int:
+    manifest = Manifest.from_path(Path(args.path))
+    vlnv = manifest.vlnv
+    output = (
+        Path(args.output)
+        if args.output
+        else Path(f"{vlnv.vendor}.{vlnv.library}.{vlnv.name}.{vlnv.version}.xml")
+    )
+    output.write_text(to_ipxact(manifest), encoding="utf-8")
+    print(f"Exported IP-XACT for {vlnv} -> {output}")
     return 0
 
 

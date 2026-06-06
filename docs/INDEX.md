@@ -38,6 +38,7 @@ quick-find reference.
 | Packaging (`.ipkg`) | `src/hdl_ip_packager/packaging.py` | implemented |
 | Tool-flow backends (`gen`) | `src/hdl_ip_packager/backends/` | implemented (Verilator + Vivado) |
 | Dependency tree view (`tree`) | `src/hdl_ip_packager/treeview.py` | implemented |
+| IP-XACT export (`export-ipxact`) | `src/hdl_ip_packager/ipxact.py` | implemented (1685-2014) |
 
 ## Tooling & build files
 
@@ -78,6 +79,8 @@ quick-find reference.
 | `tests/integration/test_gen_cli.py` | `hdlpkg gen` over the examples (resolve → assemble → render → write) |
 | `tests/unit/test_treeview.py` | `render_dependency_tree`: ordering, version annotation, diamond `(*)` marking |
 | `tests/integration/test_tree_cli.py` | `hdlpkg tree` over the examples |
+| `tests/unit/test_ipxact.py` | `to_ipxact`: VLNV, fileSets/fileType, model views, determinism |
+| `tests/integration/test_ipxact_cli.py` | `hdlpkg export-ipxact` writes a parseable component XML |
 | `tests/unit/test_docs_site.py` | `mkdocs.yml` parses and every `nav` page exists under `docs/` |
 | `tests/unit/test_precommit_config.py` | `.pre-commit-config.yaml` parses and keeps the CI-mirroring hooks |
 | `tests/unit/test_check_release_version.py` | Release version guard: tag-to-version parsing + tag/package match check |
@@ -100,6 +103,7 @@ quick-find reference.
 | `hdlpkg yank <vlnv> --registry DIR` | implemented | Hide a published version from new resolves |
 | `hdlpkg gen <target> [--search DIR] [--output DIR]` | implemented | Generate tool-flow inputs (Verilator `.vc` / Vivado `.tcl`) for a target |
 | `hdlpkg tree [--search DIR]` | implemented | Print the resolved dependency graph as a tree |
+| `hdlpkg export-ipxact [--output FILE]` | implemented | Export an IP-XACT (IEEE 1685-2014) component XML |
 | `hdlpkg export-ipxact` | planned | Export IP-XACT (IEEE 1685) for tool interop |
 
 ## Glossary

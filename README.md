@@ -92,6 +92,7 @@ hdlpkg publish ip.toml --registry ../reg    # publish into a local registry
 hdlpkg pull acme:common:fifo:1.0.0 --registry ../reg --output ./fifo
 hdlpkg gen sim ip.toml --search ../cores     # generate Verilator/Vivado inputs for a target
 hdlpkg tree ip.toml --search ../cores        # print the resolved dependency graph
+hdlpkg export-ipxact ip.toml                 # export an IP-XACT (IEEE 1685) component XML
 python -m hdl_ip_packager info   # same CLI, invoked as a module
 ```
 

@@ -51,6 +51,8 @@ All source lives under [src/hdl_ip_packager/](../src/hdl_ip_packager/).
 | Registry | [registry.py](../src/hdl_ip_packager/registry.py) | implemented (local + HTTP) | Abstract `Registry` + local-dir/HTTP/writable-local backends + graph walker (Git/OCI tracked as issues) |
 | Packaging | [packaging.py](../src/hdl_ip_packager/packaging.py) | implemented | Build/read the deterministic `.ipkg` artifact (`pack_core`, `extract_ipkg`) |
 | Backends | [backends/](../src/hdl_ip_packager/backends/) | implemented (Verilator + Vivado) | EDAM-like intermediate (`build_eda_design`) → tool inputs behind `hdlpkg gen` |
+| Tree view | [treeview.py](../src/hdl_ip_packager/treeview.py) | implemented | `render_dependency_tree` → ASCII dependency graph behind `hdlpkg tree` |
+| IP-XACT | [ipxact.py](../src/hdl_ip_packager/ipxact.py) | implemented | `to_ipxact` → IEEE 1685-2014 component XML behind `hdlpkg export-ipxact` |
 
 The dependency direction is strictly one-way and acyclic:
 
@@ -184,7 +186,12 @@ filesets), emitted dependencies-first via a topological sort. Two backends ship:
 `VerilatorBackend` (a `.vc` command file) and `VivadoBackend` (a `.tcl` source
 script); both are pure (`generate` returns `{filename: text}`), so the CLI does the
 file writing. Tool specifics stay out of the manifest/resolver/packaging layers.
-- `export-ipxact` *(planned, M7)* → IEEE 1685 XML for Vivado/other-tool interop.
+### IP-XACT export *(implemented — [ipxact.py](../src/hdl_ip_packager/ipxact.py))*
+`export-ipxact` renders a manifest as an IEEE **1685-2014** component XML via the
+pure `to_ipxact`: VLNV identity, a `model` of one view + componentInstantiation per
+target, and the `fileSets`. The manifest's fileset `type` values are already the
+IP-XACT `fileType` vocabulary, so they map straight through. Output is well-formed
+and deterministic (stdlib `ElementTree`); XSD validation is a tracked follow-up.
 
 ### Supply-chain *(planned)*
 Checksums first; then optional Sigstore (cosign) signing and an SBOM emitted at

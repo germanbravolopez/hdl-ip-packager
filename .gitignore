@@ -50,6 +50,10 @@ work/
 # MkDocs build output (the docs site is published by CI, never committed).
 site/
 
+# Generated XML at the repo root: IP-XACT exports (export-ipxact) and CI reports
+# (coverage.xml / test-results.xml). No source XML lives at the root.
+/*.xml
+
 # --------------------------------------------------------------------------- #
 # Editor / OS                                                                  #
 # --------------------------------------------------------------------------- #
