@@ -54,6 +54,9 @@ site/
 # (coverage.xml / test-results.xml). No source XML lives at the root.
 /*.xml
 
+# Generated CycloneDX SBOMs (hdlpkg pack --sbom default output).
+*.cdx.json
+
 # --------------------------------------------------------------------------- #
 # Editor / OS                                                                  #
 # --------------------------------------------------------------------------- #

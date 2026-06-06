@@ -45,6 +45,7 @@ from .registry import (
     available_from_registry,
 )
 from .resolver import Resolution, resolve
+from .sbom import CYCLONEDX_SPEC_VERSION, build_cyclonedx
 from .treeview import render_dependency_tree
 from .version import Version, VersionConstraint
 from .vlnv import PackageRef, Vlnv
@@ -52,6 +53,7 @@ from .vlnv import PackageRef, Vlnv
 __version__ = "0.6.0"
 
 __all__ = [
+    "CYCLONEDX_SPEC_VERSION",
     "IPXACT_NAMESPACE",
     "Backend",
     "BackendError",
@@ -86,6 +88,7 @@ __all__ = [
     "__version__",
     "artifact_filename",
     "available_from_registry",
+    "build_cyclonedx",
     "build_eda_design",
     "default_cache_root",
     "extract_ipkg",

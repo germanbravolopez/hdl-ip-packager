@@ -43,14 +43,17 @@ unit-tested (151 passing tests, ~96% coverage):
   (`build_eda_design`) feeding Verilator (`.vc`) and Vivado (`.tcl`) backends.
 - **IP-XACT** — IEEE 1685-2014 component export (`ipxact.py`: `to_ipxact`) behind
   `hdlpkg export-ipxact`.
+- **Supply-chain** — content checksums (SHA-256) everywhere, plus a deterministic
+  CycloneDX SBOM (`sbom.py`: `build_cyclonedx`) emitted by `hdlpkg pack --sbom`
+  (Sigstore signing deferred).
 - **CLI** — `info`/`validate`/`init`/`resolve`/`install`/`pack`/`publish`/`pull`/
   `yank`/`gen`/`tree`/`export-ipxact` work; `add` is wired and reports planned status.
 - **Tooling** — pytest (markers + coverage gate + foldable summary), ruff, mypy
   strict on `src/`, CI workflow, and a cross-platform test-summary renderer.
 
-**Next**: implement **Supply-chain** signing + SBOM (Roadmap M8), the final
-milestone (gated for `1.0.0` per the Release plan, or `0.7.0` if formats still move).
-(M7 IP-XACT export is implemented on `main`, awaiting the `0.6.0` release.)
+**Next**: all roadmap milestones (M1–M8) are delivered; the remaining work is the
+`1.0.0` stability gate (see the Release plan), plus the open backends/signing issues.
+(M8 SBOM generation is implemented on `main`, awaiting the `0.7.0` release.)
 
 ---
 
@@ -60,9 +63,11 @@ milestone (gated for `1.0.0` per the Release plan, or `0.7.0` if formats still m
 > item is in [architecture.md](./architecture.md); the rationale is in
 > [research/state_of_the_art.md](./research/state_of_the_art.md).
 
-| # | Milestone | Scope | Key files |
-|---|-----------|-------|-----------|
-| M8 | **Supply-chain** | Sigstore (cosign) signing + SBOM at `pack` time. | `packaging.py` |
+_All roadmap milestones (M1–M8) are delivered._ The remaining path to `1.0.0` is the
+stability gate in the Release plan (frozen formats, stable CLI/registry protocol, a
+third-party publish/consume, an `rc` soak) — not new features. Sigstore (cosign)
+signing, the unbuilt half of M8, is tracked under Open Non-Blocking Issues (it needs
+OIDC/Fulcio/Rekor infrastructure to build and test honestly).
 
 ---
 
@@ -118,6 +123,7 @@ _None._
 | OCI artifact registry | `registry.py` | The differentiator backend: store/fetch cores as OCI artifacts (Docker-registry infra). Deferred from M4: needs a live OCI registry (or a mock) and the manifest/blob API; significant standalone work. |
 | Richer dependency fileset selection | `backends/edam.py` | M6 exports a dependency's `rtl` fileset (or all non-testbench, by name heuristic). Honor `Fileset.depend` and target-scoped fileset deps so a core can declare exactly which filesets it exposes to dependents, rather than relying on the `rtl`/`tb` naming convention. |
 | More tool-flow backends | `backends/` | M6 ships Verilator + Vivado. Add Icarus/Verilator-lint/GHDL (sim) and Quartus/Yosys (synth) backends behind the same `Backend` interface, plus per-target tool options (e.g. extra flags) in `[targets.*]`. |
+| Sigstore (cosign) artifact signing | `packaging.py`, `.github/workflows/` | The unbuilt half of M8: keyless signing of the `.ipkg` + SBOM and a verify path. Needs OIDC + Fulcio/Rekor (or a managed key) and a live transparency log to implement and test honestly — deferred like the Git/OCI backends. Checksums + SBOM already ship; this adds authenticity on top. |
 | Validate IP-XACT against the official XSD | `ipxact.py`, tests | M7 emits well-formed, structurally-conventional 1685-2014 XML but does not validate against the Accellera XSD. Add an (optional, dev-only) schema-validation test (e.g. `xmlschema`) so structural drift is caught; consider IP-XACT 2022 and richer mapping (bus interfaces, parameters). |
 
 ---
@@ -134,6 +140,27 @@ _None._
 ---
 
 ## Completed Milestones
+
+### M8 — Supply-chain: CycloneDX SBOM at pack time — June 2026
+- [x] **Implemented deterministic SBOM generation (`sbom.py`) and wired `hdlpkg pack
+  --sbom`.** A pure `build_cyclonedx(root, dependencies)` renders a **CycloneDX 1.5**
+  JSON SBOM: the packed core as the `metadata.component`, its resolved dependency
+  manifests as `components` (each with a VLNV `bom-ref`, `group`, `purl`
+  `pkg:generic/...`, and licence), and the `dependencies` graph of edges. Output is
+  deterministic by construction (sorted keys, components/edges sorted by VLNV, no
+  timestamp or random serial number) so the same inputs pack to byte-identical SBOM
+  bytes. The CLI `pack --sbom [FILE]` is the thin wrapper: it writes the SBOM
+  alongside the `.ipkg` (default `<vlnv>.cdx.json`), resolving the dependency graph
+  over `--search` so the SBOM pins concrete versions. Together with the SHA-256
+  content addressing that already pins every artifact across the cache, lockfile,
+  and registry, this delivers the *integrity + bill-of-materials* half of the
+  supply-chain milestone. **Deferred** (new Open Non-Blocking Issue): Sigstore
+  (cosign) keyless **signing** of the artifact + SBOM, which needs OIDC/Fulcio/Rekor
+  infrastructure (or a managed key + transparency log) to build and test honestly —
+  the same external-service constraint that deferred the Git/OCI backends. Exposed
+  `build_cyclonedx`/`CYCLONEDX_SPEC_VERSION`. Files: `src/hdl_ip_packager/sbom.py`,
+  `src/hdl_ip_packager/cli.py`, `src/hdl_ip_packager/__init__.py`, `.gitignore`,
+  `tests/unit/test_sbom.py`, `tests/integration/test_sbom_cli.py`.
 
 ### Release 0.6.0 — June 2026
 - [x] **Tagged `0.6.0`** per the Release plan: IP-XACT (IEEE 1685-2014) export (M7)

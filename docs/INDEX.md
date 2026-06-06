@@ -39,6 +39,7 @@ quick-find reference.
 | Tool-flow backends (`gen`) | `src/hdl_ip_packager/backends/` | implemented (Verilator + Vivado) |
 | Dependency tree view (`tree`) | `src/hdl_ip_packager/treeview.py` | implemented |
 | IP-XACT export (`export-ipxact`) | `src/hdl_ip_packager/ipxact.py` | implemented (1685-2014) |
+| SBOM (`pack --sbom`) | `src/hdl_ip_packager/sbom.py` | implemented (CycloneDX 1.5) |
 
 ## Tooling & build files
 
@@ -81,6 +82,8 @@ quick-find reference.
 | `tests/integration/test_tree_cli.py` | `hdlpkg tree` over the examples |
 | `tests/unit/test_ipxact.py` | `to_ipxact`: VLNV, fileSets/fileType, model views, determinism |
 | `tests/integration/test_ipxact_cli.py` | `hdlpkg export-ipxact` writes a parseable component XML |
+| `tests/unit/test_sbom.py` | `build_cyclonedx`: components, dependency edges, determinism |
+| `tests/integration/test_sbom_cli.py` | `hdlpkg pack --sbom` writes a CycloneDX SBOM with resolved deps |
 | `tests/unit/test_docs_site.py` | `mkdocs.yml` parses and every `nav` page exists under `docs/` |
 | `tests/unit/test_precommit_config.py` | `.pre-commit-config.yaml` parses and keeps the CI-mirroring hooks |
 | `tests/unit/test_check_release_version.py` | Release version guard: tag-to-version parsing + tag/package match check |
@@ -97,7 +100,7 @@ quick-find reference.
 | `hdlpkg add <vlnv>` | planned | Add a dependency to `ip.toml` |
 | `hdlpkg resolve [path] [--search DIR] [--output]` | implemented | Resolve deps against a local registry, write `ip.lock` |
 | `hdlpkg install [path] [--search] [--cache-dir]` | implemented | Resolve + fetch into the content-addressed cache (verified) |
-| `hdlpkg pack [path] [--output]` | implemented | Build a deterministic `.ipkg` artifact |
+| `hdlpkg pack [path] [--output] [--sbom] [--search]` | implemented | Build a deterministic `.ipkg`; `--sbom` also writes a CycloneDX SBOM |
 | `hdlpkg publish [path] --registry DIR` | implemented | Publish a core to a local registry (append-only) |
 | `hdlpkg pull <vlnv> --registry DIR [--output]` | implemented | Fetch a core by VLNV into the cache; optionally extract |
 | `hdlpkg yank <vlnv> --registry DIR` | implemented | Hide a published version from new resolves |

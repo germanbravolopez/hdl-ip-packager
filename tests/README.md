@@ -23,7 +23,8 @@ tests/
 │   ├── test_edam.py            build_eda_design: selection, topo order, dedup
 │   ├── test_backends.py        Verilator .vc / Vivado .tcl rendering
 │   ├── test_treeview.py        render_dependency_tree: ordering + diamond marking
-│   └── test_ipxact.py          to_ipxact: IEEE 1685-2014 component XML
+│   ├── test_ipxact.py          to_ipxact: IEEE 1685-2014 component XML
+│   └── test_sbom.py            build_cyclonedx: CycloneDX SBOM + determinism
 └── integration/                multi-module / filesystem tests            - marker: integration
     ├── test_manifest_cli_flow.py
     ├── test_resolve_cli.py         hdlpkg resolve end to end on examples/
@@ -34,7 +35,8 @@ tests/
     ├── test_examples.py         validates the bundled examples/ cores
     ├── test_gen_cli.py          hdlpkg gen over examples (resolve → render → write)
     ├── test_tree_cli.py         hdlpkg tree over examples
-    └── test_ipxact_cli.py       hdlpkg export-ipxact over examples
+    ├── test_ipxact_cli.py       hdlpkg export-ipxact over examples
+    └── test_sbom_cli.py         hdlpkg pack --sbom over examples
 ```
 
 There are intentionally **no `__init__.py`** files: the suite runs under pytest's

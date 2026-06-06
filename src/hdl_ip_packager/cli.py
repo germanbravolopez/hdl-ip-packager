@@ -26,6 +26,7 @@ from .packaging import artifact_filename, extract_ipkg, pack_core
 from .registry import LocalDirectoryRegistry, LocalRegistry, available_from_registry
 from .resolver import Resolution
 from .resolver import resolve as resolve_deps
+from .sbom import build_cyclonedx
 from .scaffold import DEFAULT_VERSION, ScaffoldOptions, render_manifest
 from .treeview import render_dependency_tree
 from .vlnv import Vlnv
@@ -128,6 +129,21 @@ def build_parser() -> argparse.ArgumentParser:
     p_pack = sub.add_parser("pack", help="package this core into a distributable .ipkg")
     p_pack.add_argument("path", nargs="?", default=MANIFEST_FILENAME, help="path to the manifest")
     p_pack.add_argument("--output", help="output .ipkg path (default: <vlnv>.ipkg in the cwd)")
+    p_pack.add_argument(
+        "--sbom",
+        nargs="?",
+        const="",
+        default=None,
+        metavar="FILE",
+        help="also write a CycloneDX SBOM (default path: <vlnv>.cdx.json)",
+    )
+    p_pack.add_argument(
+        "--search",
+        action="append",
+        metavar="DIR",
+        help="directory to scan for dependency cores when building the SBOM "
+        "(default: the manifest's parent directory)",
+    )
     p_pack.set_defaults(func=_cmd_pack)
 
     p_publish = sub.add_parser("publish", help="publish this core to a local registry")
@@ -322,6 +338,21 @@ def _cmd_pack(args: argparse.Namespace) -> int:
     output = Path(args.output) if args.output else Path(artifact_filename(manifest.vlnv))
     output.write_bytes(data)
     print(f"Packed {manifest.vlnv} -> {output} ({len(data)} bytes, {sha256_digest(data)})")
+
+    if args.sbom is not None:
+        # Resolve the dependency graph (if any) so the SBOM pins concrete versions.
+        dependencies: list[Manifest] = []
+        if manifest.dependencies:
+            resolution, registry = _resolve_local(manifest_path, args.search)
+            dependencies = [registry.manifest(vlnv) for vlnv in resolution.vlnvs]
+        vlnv = manifest.vlnv
+        sbom_path = (
+            Path(args.sbom)
+            if args.sbom
+            else Path(f"{vlnv.vendor}.{vlnv.library}.{vlnv.name}.{vlnv.version}.cdx.json")
+        )
+        sbom_path.write_text(build_cyclonedx(manifest, dependencies), encoding="utf-8")
+        print(f"Wrote SBOM ({len(dependencies)} dependency component(s)) -> {sbom_path}")
     return 0
 
 

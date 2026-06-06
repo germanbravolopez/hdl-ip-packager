@@ -53,6 +53,7 @@ All source lives under [src/hdl_ip_packager/](../src/hdl_ip_packager/).
 | Backends | [backends/](../src/hdl_ip_packager/backends/) | implemented (Verilator + Vivado) | EDAM-like intermediate (`build_eda_design`) → tool inputs behind `hdlpkg gen` |
 | Tree view | [treeview.py](../src/hdl_ip_packager/treeview.py) | implemented | `render_dependency_tree` → ASCII dependency graph behind `hdlpkg tree` |
 | IP-XACT | [ipxact.py](../src/hdl_ip_packager/ipxact.py) | implemented | `to_ipxact` → IEEE 1685-2014 component XML behind `hdlpkg export-ipxact` |
+| SBOM | [sbom.py](../src/hdl_ip_packager/sbom.py) | implemented (CycloneDX) | `build_cyclonedx` → deterministic CycloneDX 1.5 SBOM behind `hdlpkg pack --sbom` |
 
 The dependency direction is strictly one-way and acyclic:
 
@@ -193,9 +194,13 @@ target, and the `fileSets`. The manifest's fileset `type` values are already the
 IP-XACT `fileType` vocabulary, so they map straight through. Output is well-formed
 and deterministic (stdlib `ElementTree`); XSD validation is a tracked follow-up.
 
-### Supply-chain *(planned)*
-Checksums first; then optional Sigstore (cosign) signing and an SBOM emitted at
-`pack` time, matching the 2026 SLSA/SBOM baseline.
+### Supply-chain *(SBOM implemented — [sbom.py](../src/hdl_ip_packager/sbom.py); signing planned)*
+Checksums first (the packed-content SHA-256 already pins every artifact across the
+cache, lockfile, and registry); then a deterministic **CycloneDX 1.5** SBOM emitted
+at `pack` time via `pack --sbom` (`build_cyclonedx`: the core + its resolved
+dependency components + the dependency graph). **Sigstore (cosign) keyless signing**
+of the artifact + SBOM remains planned — it needs OIDC/Fulcio/Rekor infrastructure —
+and is tracked as an open issue. This matches the 2026 SLSA/SBOM baseline.
 
 ---
 

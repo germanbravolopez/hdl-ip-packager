@@ -88,6 +88,7 @@ hdlpkg validate ip.toml       # parse + validate a manifest (exit 0 if OK)
 hdlpkg resolve ip.toml --search ../cores   # resolve deps to a deterministic ip.lock
 hdlpkg install ip.toml --search ../cores   # resolve + fetch deps into the cache
 hdlpkg pack ip.toml                         # build a distributable .ipkg
+hdlpkg pack ip.toml --sbom --search ../cores # also emit a CycloneDX SBOM
 hdlpkg publish ip.toml --registry ../reg    # publish into a local registry
 hdlpkg pull acme:common:fifo:1.0.0 --registry ../reg --output ./fifo
 hdlpkg gen sim ip.toml --search ../cores     # generate Verilator/Vivado inputs for a target
