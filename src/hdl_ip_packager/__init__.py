@@ -24,7 +24,7 @@ from .manifest import Dependency, Fileset, Manifest, Target
 from .version import Version, VersionConstraint
 from .vlnv import PackageRef, Vlnv
 
-__version__ = "0.0.1"
+__version__ = "0.1.0"
 
 __all__ = [
     "Dependency",

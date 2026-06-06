@@ -18,8 +18,10 @@ them to Archive. Convert relative dates to absolute (e.g. "June 2026").
 
 **Active branch**: `main`
 
+**Version**: `0.1.0` — the first tagged release (foundation; see the Release plan).
+
 **Stage**: Foundation. The pure core is implemented, fully typed, linted, and
-unit-tested (108 passing tests, ~96% coverage):
+unit-tested (151 passing tests, ~96% coverage):
 - **Versioning** — SemVer 2.0.0 `Version` + `VersionConstraint` (caret/tilde/range
   grammar, pre-release precedence).
 - **Identity** — `PackageRef` and `Vlnv` (`vendor:library:name:version`).
@@ -53,6 +55,44 @@ unit-tested (108 passing tests, ~96% coverage):
 
 ---
 
+## Release plan
+
+The packager is pre-1.0, so it uses `0.MINOR.PATCH`:
+- **MINOR** (`0.1 -> 0.2`) = a capability milestone; pre-1.0 it may also carry
+  breaking `ip.toml` / `ip.lock` / CLI changes (the 0.x licence to iterate).
+- **PATCH** (`0.2.0 -> 0.2.1`) = bug / doc fixes; no new capability, no format break.
+- **`X.Y.Z-rc.N`** pre-release tags for anything risky (precedence is handled by
+  `version.py`; `release.yml` already accepts these tags).
+
+The compatibility contract SemVer tracks here is the **on-disk formats users commit
+to their repos** (`ip.toml`, `ip.lock`) plus the `hdlpkg` CLI surface — more than
+the Python API. Cut a release at each point a user can do something new end to end;
+milestones that are not independently useful are grouped into one release.
+
+| Version | After | User-facing capability it unlocks |
+|---------|-------|-----------------------------------|
+| **0.1.0** | Foundation (done) | Author + validate: `init` / `info` / `validate`; publishes the v0 `ip.toml` schema. First tagged release / release-pipeline shakedown. |
+| **0.2.0** | M1 + M2 | Resolve a dependency graph to a deterministic `ip.lock` (the core value prop). |
+| **0.3.0** | M3 + M4 | Fetch cores: content-addressed cache + local/Git/HTTP/OCI registries. |
+| **0.4.0** | M5 | `pack` / `publish` / `pull` — the full producer/consumer loop. |
+| **0.5.0** | M6 | Tool-flow generation (EDAM -> Verilator/Vivado). |
+| **0.6.0** | M7 | IP-XACT (IEEE 1685) export for tool interop. |
+| **1.0.0** | M8 + soak | Supply-chain (signing + SBOM) **and** the stability commitment below. |
+
+Patch releases ship between these as fixes land. Each milestone above ends with its
+release tag when it completes (see "Releasing" in the [README](../README.md)).
+
+**1.0.0 is a promise, not "all features done."** Gate it on:
+- `ip.toml` and `ip.lock` formats frozen, or a migration path exists;
+- the CLI command/flag surface stable;
+- the registry/OCI protocol stable;
+- at least one core published and consumed by a third party;
+- a `1.0.0-rc.1` soak with no format changes.
+
+If the formats are still moving when M8 lands, release it as `0.7.0`, not `1.0.0`.
+
+---
+
 ## Blocking Issues (must fix before the next release)
 
 _None._
@@ -79,6 +119,20 @@ _None._
 ---
 
 ## Completed Milestones
+
+### Release plan + first tag (0.1.0) — June 2026
+- [x] **Defined the pre-1.0 release plan and cut `0.1.0`.** Added a "Release plan"
+  section to this tracker: `0.MINOR.PATCH` while pre-1.0 (MINOR = capability
+  milestone and may break formats; PATCH = fixes; `-rc.N` for risky cuts), with the
+  insight that the SemVer contract here is the on-disk `ip.toml` / `ip.lock` formats
+  + CLI rather than the Python API. Releases are cut at capability boundaries, so
+  milestones are grouped into six minor releases (0.1 foundation, 0.2 = M1+M2,
+  0.3 = M3+M4, 0.4 = M5, 0.5 = M6, 0.6 = M7) with `1.0.0` reserved for M8 *plus* an
+  explicit stability commitment (frozen formats, stable CLI/registry protocol, a
+  third-party publish/consume, and an rc soak). Bumped the package to `0.1.0`
+  (`pyproject.toml`, `__init__.py`) and tagged it as the first release and a
+  low-stakes shakedown of the new `release.yml` pipeline. Files:
+  `docs/progress_tracker.md`, `pyproject.toml`, `src/hdl_ip_packager/__init__.py`.
 
 ### Release automation (tag -> PyPI) — June 2026
 - [x] **Added a tag-driven PyPI release workflow.** New
