@@ -18,7 +18,7 @@ them to Archive. Convert relative dates to absolute (e.g. "June 2026").
 
 **Active branch**: `main`
 
-**Version**: `0.5.0` — tool-flow generation: `hdlpkg gen` for Verilator/Vivado (M6);
+**Version**: `0.6.0` — IP-XACT (IEEE 1685) export via `hdlpkg export-ipxact` (M7);
 see the Release plan.
 
 **Stage**: Foundation. The pure core is implemented, fully typed, linted, and
@@ -134,6 +134,11 @@ _None._
 ---
 
 ## Completed Milestones
+
+### Release 0.6.0 — June 2026
+- [x] **Tagged `0.6.0`** per the Release plan: IP-XACT (IEEE 1685-2014) export (M7)
+  — `hdlpkg export-ipxact` writes a component XML (VLNV + model views + fileSets)
+  for tool interop. Bumped `pyproject.toml` + `__init__.py`.
 
 ### M7 — IP-XACT (IEEE 1685) export — June 2026
 - [x] **Implemented IP-XACT export (`ipxact.py`) and wired `hdlpkg export-ipxact`.**
