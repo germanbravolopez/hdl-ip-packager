@@ -28,14 +28,16 @@ unit-tested (151 passing tests, ~96% coverage):
 - **Manifest** — `ip.toml` parsing/validation (`[package]`, `[dependencies]`,
   `[filesets]`, `[targets]`).
 - **Resolver** — backtracking, newest-compatible dependency resolution (one `Vlnv`
-  per package, fail-on-conflict); pure, fed by an in-memory version index until a
-  registry (M4) supplies it.
-- **CLI** — `hdlpkg info`, `hdlpkg validate`, and `hdlpkg init` (scaffold a starter
-  `ip.toml`) work; all other commands are wired and report planned status.
+  per package, fail-on-conflict); pure, fed by an in-memory version index.
+- **Lockfile** — deterministic `ip.lock` (serialize/parse/verify a `Resolution`
+  with per-core source + SHA-256), written by `hdlpkg resolve`.
+- **CLI** — `hdlpkg info`, `hdlpkg validate`, `hdlpkg init` (scaffold), and
+  `hdlpkg resolve` (deps -> `ip.lock` via a local core scan) work; the remaining
+  commands are wired and report planned status.
 - **Tooling** — pytest (markers + coverage gate + foldable summary), ruff, mypy
   strict on `src/`, CI workflow, and a cross-platform test-summary renderer.
 
-**Next**: implement the **Lockfile** (Roadmap M2); M1+M2 together ship as `0.2.0`.
+**Next**: implement the **Content-addressed cache** (Roadmap M3). M1+M2 ship as `0.2.0`.
 
 ---
 
@@ -47,7 +49,6 @@ unit-tested (151 passing tests, ~96% coverage):
 
 | # | Milestone | Scope | Key files |
 |---|-----------|-------|-----------|
-| M2 | **Lockfile (`ip.lock`)** | Serialize/verify a `Resolution` with per-core SHA-256 + source; read-back determinism. | `lockfile.py` (new) |
 | M3 | **Content-addressed cache** | Local store keyed by digest; verify-on-read; offline reuse. | `registry.py`/`cache.py` |
 | M4 | **Registry backends** | `Registry` impls: local dir, Git channel, HTTP index, **OCI artifact** registry. | `registry.py` |
 | M5 | **`pack` / `publish` / `pull`** | Build `.ipkg`; append-only publish with yank; fetch by VLNV. | `cli.py`, `packaging.py` (new) |
@@ -121,6 +122,27 @@ _None._
 ---
 
 ## Completed Milestones
+
+### M2 — Lockfile (`ip.lock`) + `hdlpkg resolve` — June 2026
+- [x] **Implemented the lockfile model and wired `hdlpkg resolve`.** New pure
+  `lockfile.py`: `LockedPackage` (vlnv + source + checksum) and `Lockfile`
+  (`from_resolution`, `to_toml`/`from_toml`/`from_path`, `verify`,
+  `matches_resolution`). The file is TOML with a schema `version` and a
+  `[[package]]` array sorted by VLNV, so it is deterministic and diff-friendly;
+  `from_toml(to_toml(x)) == x` round-trips, and `verify` fails closed on a missing
+  or mismatched checksum. A `sha256_digest(bytes)` helper gives the canonical
+  `sha256:<hex>` form. The `resolve` CLI command (now real, removed from the
+  planned stubs) loads the root manifest, discovers candidate cores by scanning
+  `--search` directories for `ip.toml` (a stopgap until M4's registry backends),
+  runs the resolver, and writes `ip.lock` next to the manifest. The recorded
+  checksum currently digests the manifest bytes; M3 widens it to full packaged
+  content without changing the format. Exposed `Lockfile`/`LockedPackage`/
+  `sha256_digest`/`LockfileError` from the package API and added `LockfileError` to
+  the hierarchy. Verified end to end on the bundled `examples/` (UART resolves the
+  FIFO dep). Files: `src/hdl_ip_packager/lockfile.py`,
+  `src/hdl_ip_packager/cli.py`, `src/hdl_ip_packager/exceptions.py`,
+  `src/hdl_ip_packager/__init__.py`, `tests/unit/test_lockfile.py`,
+  `tests/integration/test_resolve_cli.py`, `tests/unit/test_cli.py`.
 
 ### M1 — Dependency resolver — June 2026
 - [x] **Implemented the dependency resolver (`resolver.py`).** `resolve(root,

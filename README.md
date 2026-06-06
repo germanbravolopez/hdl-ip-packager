@@ -36,13 +36,16 @@ Implemented today:
   constraint grammar (`^`, `~`, `>=`, `<`, ranges, `*`) for dependency specs.
 - **Manifest (`ip.toml`)** — a TOML manifest per core declaring identity,
   metadata, filesets, dependencies, and build targets.
-- **CLI (`hdlpkg`)** — `info`, `validate`, and `init` (scaffold a starter
-  `ip.toml`) work today; the rest of the command surface is wired and reports its
-  planned status.
+- **Dependency resolver** — backtracking, newest-compatible resolution to one
+  `Vlnv` per package (fail-on-conflict, pre-release-aware).
+- **Lockfile (`ip.lock`)** — a deterministic, verifiable record of a resolve
+  (exact VLNVs + source + SHA-256), written by `hdlpkg resolve`.
+- **CLI (`hdlpkg`)** — `info`, `validate`, `init` (scaffold a starter `ip.toml`),
+  and `resolve` work today; the rest of the command surface is wired and reports
+  its planned status.
 
 Designed and on the roadmap (see the progress tracker):
 
-- Dependency **resolution** + a reproducible **lockfile** (`ip.lock`).
 - A content-addressed **cache** and pluggable **registries** (local, Git, HTTP,
   and OCI artifact registries).
 - **Packaging** (`.ipkg`), **publish/pull**, tool-flow **generation** (EDAM), and
@@ -79,6 +82,7 @@ hdlpkg --help                 # show all commands
 hdlpkg init --vendor acme --library comm --name uart   # scaffold a starter ip.toml
 hdlpkg info ip.toml           # print the parsed identity, deps, filesets, targets
 hdlpkg validate ip.toml       # parse + validate a manifest (exit 0 if OK)
+hdlpkg resolve ip.toml --search ../cores   # resolve deps to a deterministic ip.lock
 python -m hdl_ip_packager info   # same CLI, invoked as a module
 ```
 
@@ -110,6 +114,7 @@ Two complete, working cores live under [`examples/`](examples/) — a FIFO
 ```powershell
 hdlpkg info examples/uart/ip.toml
 hdlpkg validate examples/fifo/ip.toml
+hdlpkg resolve examples/uart/ip.toml --search examples   # writes examples/uart/ip.lock
 ```
 
 ---

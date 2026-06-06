@@ -46,6 +46,7 @@ All source lives under [src/hdl_ip_packager/](../src/hdl_ip_packager/).
 | Errors | [exceptions.py](../src/hdl_ip_packager/exceptions.py) | implemented | One exception hierarchy rooted at `HdlPackagerError` |
 | CLI | [cli.py](../src/hdl_ip_packager/cli.py) | implemented | `hdlpkg` entry point; `info`/`validate`/`init` work, rest are wired stubs |
 | Resolver | [resolver.py](../src/hdl_ip_packager/resolver.py) | implemented | Constraints → one concrete `Vlnv` per package (backtracking, newest-compatible) |
+| Lockfile | [lockfile.py](../src/hdl_ip_packager/lockfile.py) | implemented | Serialize/parse/verify `ip.lock` (a `Resolution` + per-core source + SHA-256) |
 | Registry/Cache | [registry.py](../src/hdl_ip_packager/registry.py) | planned | Abstract `Registry`; local/Git/HTTP/OCI backends + content-addressed cache |
 
 The dependency direction is strictly one-way and acyclic:
@@ -101,10 +102,16 @@ The per-core, author-written manifest. Schema (full example in
 
 Validation is strict and every error names the offending field via `ManifestError`.
 
-### Lockfile — `ip.lock` *(planned)*
+### Lockfile — `ip.lock` *(implemented — [lockfile.py](../src/hdl_ip_packager/lockfile.py))*
 Generated record of a resolve: the exact `Vlnv` chosen for every package plus a
-SHA-256 integrity hash and source. Committed to version control for reproducible,
-verifiable builds (the Cargo/Orbit/Go model).
+SHA-256 integrity `checksum` and a `source`. Committed to version control for
+reproducible, verifiable builds (the Cargo/Orbit/Go model). Serialized as TOML
+with a schema `version` and a `[[package]]` array sorted by VLNV (stable, diff
+-friendly); `Lockfile.from_toml` round-trips it and `verify()` fails closed on a
+missing/mismatched checksum. The module is pure — the CLI's `resolve` command does
+the directory scan and digesting. The recorded checksum currently covers the
+manifest bytes; M3 widens it to the full packaged content without changing the
+file format.
 
 ---
 

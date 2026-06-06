@@ -17,14 +17,16 @@ from pathlib import Path
 
 from . import __version__
 from .exceptions import HdlPackagerError, ManifestError
+from .lockfile import LOCKFILE_FILENAME, Lockfile, sha256_digest
 from .manifest import MANIFEST_FILENAME, Manifest
+from .resolver import resolve as resolve_deps
 from .scaffold import DEFAULT_VERSION, ScaffoldOptions, render_manifest
+from .vlnv import PackageRef, Vlnv
 
 # Commands that have a real implementation today. Everything else is a planned
 # stub (see docs/progress_tracker.md) and reports as much instead of pretending.
 _PLANNED = {
     "add": "add a dependency to ip.toml",
-    "resolve": "resolve dependencies and write the lockfile (ip.lock)",
     "install": "resolve + fetch dependencies into the local cache",
     "pack": "package this core into a distributable .ipkg artifact",
     "publish": "publish this core to a registry",
@@ -76,6 +78,28 @@ def build_parser() -> argparse.ArgumentParser:
         "--force", action="store_true", help=f"overwrite an existing {MANIFEST_FILENAME}"
     )
     p_init.set_defaults(func=_cmd_init)
+
+    p_resolve = sub.add_parser(
+        "resolve", help=f"resolve dependencies and write {LOCKFILE_FILENAME}"
+    )
+    p_resolve.add_argument(
+        "path",
+        nargs="?",
+        default=MANIFEST_FILENAME,
+        help=f"path to the root manifest (default: ./{MANIFEST_FILENAME})",
+    )
+    p_resolve.add_argument(
+        "--search",
+        action="append",
+        metavar="DIR",
+        help="directory to scan for available cores (repeatable; default: the "
+        "manifest's parent directory)",
+    )
+    p_resolve.add_argument(
+        "--output",
+        help=f"where to write the lockfile (default: ./{LOCKFILE_FILENAME} next to the manifest)",
+    )
+    p_resolve.set_defaults(func=_cmd_resolve)
 
     for name, help_text in _PLANNED.items():
         p = sub.add_parser(name, help=f"[planned] {help_text}")
@@ -148,6 +172,62 @@ def _cmd_init(args: argparse.Namespace) -> int:
     manifest_path.write_text(render_manifest(options), encoding="utf-8")
     vlnv = options.vlnv
     print(f"Created {manifest_path} for {vlnv}")
+    return 0
+
+
+def _display_path(path: Path) -> str:
+    """A forward-slash path relative to the cwd when possible, else absolute."""
+    resolved = path.resolve()
+    try:
+        return resolved.relative_to(Path.cwd()).as_posix()
+    except ValueError:
+        return resolved.as_posix()
+
+
+def _discover_cores(
+    search_dirs: list[str], exclude: Path
+) -> tuple[dict[PackageRef, list[Manifest]], dict[Vlnv, str], dict[Vlnv, str]]:
+    """Scan *search_dirs* for ``ip.toml`` cores; return an index plus source/checksum maps.
+
+    Invalid or unreadable manifests are skipped (a search tree may hold non-core
+    TOML). This local-directory scan is a stopgap until M4 routes the available
+    versions through the registry backends.
+    """
+    index: dict[PackageRef, list[Manifest]] = {}
+    sources: dict[Vlnv, str] = {}
+    checksums: dict[Vlnv, str] = {}
+    for directory in search_dirs:
+        base = Path(directory)
+        if not base.is_dir():
+            continue
+        for path in sorted(base.rglob(MANIFEST_FILENAME)):
+            if path.resolve() == exclude:
+                continue
+            try:
+                data = path.read_bytes()
+                manifest = Manifest.from_str(data.decode("utf-8"))
+            except (HdlPackagerError, OSError, UnicodeDecodeError):
+                continue
+            index.setdefault(manifest.ref, []).append(manifest)
+            sources[manifest.vlnv] = f"path:{_display_path(path.parent)}"
+            checksums[manifest.vlnv] = sha256_digest(data)
+    return index, sources, checksums
+
+
+def _cmd_resolve(args: argparse.Namespace) -> int:
+    manifest_path = Path(args.path)
+    root = _load(args.path)
+    search_dirs = args.search or [str(manifest_path.resolve().parent)]
+    index, sources, checksums = _discover_cores(search_dirs, manifest_path.resolve())
+
+    resolution = resolve_deps(root, index)
+    lock = Lockfile.from_resolution(resolution, sources=sources, checksums=checksums)
+    output = Path(args.output) if args.output else manifest_path.parent / LOCKFILE_FILENAME
+    output.write_text(lock.to_toml(), encoding="utf-8")
+
+    print(f"Resolved {len(resolution.vlnvs)} package(s); wrote {output}")
+    for vlnv in resolution.vlnvs:
+        print(f"  {vlnv}")
     return 0
 
 

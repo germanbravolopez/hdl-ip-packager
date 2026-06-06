@@ -16,10 +16,12 @@ from .exceptions import (
     InvalidConstraintError,
     InvalidVersionError,
     InvalidVlnvError,
+    LockfileError,
     ManifestError,
     RegistryError,
     ResolutionError,
 )
+from .lockfile import LockedPackage, Lockfile, sha256_digest
 from .manifest import Dependency, Fileset, Manifest, Target
 from .resolver import Resolution, resolve
 from .version import Version, VersionConstraint
@@ -34,6 +36,9 @@ __all__ = [
     "InvalidConstraintError",
     "InvalidVersionError",
     "InvalidVlnvError",
+    "LockedPackage",
+    "Lockfile",
+    "LockfileError",
     "Manifest",
     "ManifestError",
     "PackageRef",
@@ -46,4 +51,5 @@ __all__ = [
     "Vlnv",
     "__version__",
     "resolve",
+    "sha256_digest",
 ]

@@ -32,6 +32,7 @@ quick-find reference.
 | Public API | `src/hdl_ip_packager/__init__.py` | implemented |
 | `python -m` shim | `src/hdl_ip_packager/__main__.py` | implemented |
 | Resolver | `src/hdl_ip_packager/resolver.py` | implemented |
+| Lockfile (`ip.lock`) | `src/hdl_ip_packager/lockfile.py` | implemented |
 | Registry / cache | `src/hdl_ip_packager/registry.py` | planned (seam) |
 
 ## Tooling & build files
@@ -62,6 +63,8 @@ quick-find reference.
 | `tests/unit/test_scaffold.py` | `init` scaffolder: rendered manifest round-trips, validation errors |
 | `tests/unit/test_cli.py` | CLI commands, exit codes, output |
 | `tests/unit/test_resolver.py` | Dependency resolver: newest-compatible, transitive, diamond, conflict, pre-release, backtracking |
+| `tests/unit/test_lockfile.py` | Lockfile model: round-trip, determinism, parse errors, checksum verification |
+| `tests/integration/test_resolve_cli.py` | `hdlpkg resolve` end to end on the bundled examples |
 | `tests/unit/test_planned_stubs.py` | Registry seam imports and fails loudly |
 | `tests/unit/test_docs_site.py` | `mkdocs.yml` parses and every `nav` page exists under `docs/` |
 | `tests/unit/test_precommit_config.py` | `.pre-commit-config.yaml` parses and keeps the CI-mirroring hooks |
@@ -77,7 +80,7 @@ quick-find reference.
 | `hdlpkg validate [path]` | implemented | Parse + validate a manifest (exit 0 if OK) |
 | `hdlpkg init [dir]` | implemented | Scaffold a starter `ip.toml` (flags or interactive prompts) |
 | `hdlpkg add <vlnv>` | planned | Add a dependency to `ip.toml` |
-| `hdlpkg resolve` | planned | Resolve deps, write `ip.lock` |
+| `hdlpkg resolve [path] [--search DIR] [--output]` | implemented | Resolve deps against local cores, write `ip.lock` |
 | `hdlpkg install` | planned | Resolve + fetch into the cache |
 | `hdlpkg pack` | planned | Build a `.ipkg` artifact |
 | `hdlpkg publish` | planned | Publish to a registry |
@@ -92,7 +95,7 @@ quick-find reference.
 | **VLNV** | `vendor:library:name:version` — IP-XACT core identity scheme |
 | **PackageRef** | The version-less `vendor:library:name` triple (a dependency key) |
 | **Manifest** | The per-core `ip.toml` declaring identity, deps, filesets, targets |
-| **Lockfile** | `ip.lock` — generated exact-version + integrity record (planned) |
+| **Lockfile** | `ip.lock` — generated exact-version + integrity record (one `[[package]]` per dep) |
 | **Fileset** | A named group of HDL source files of one type |
 | **Target** | A build config: which filesets feed which tool flow + the top unit |
 | **Tool flow** | A back-end (Verilator, Vivado, …) the packager generates inputs for |

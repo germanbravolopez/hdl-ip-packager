@@ -33,5 +33,9 @@ class ResolutionError(HdlPackagerError):
     """The dependency resolver could not satisfy the requested constraints."""
 
 
+class LockfileError(HdlPackagerError):
+    """An ``ip.lock`` lockfile is malformed, or its integrity check failed."""
+
+
 class RegistryError(HdlPackagerError):
     """A registry/cache operation (fetch, publish, lookup) failed."""
