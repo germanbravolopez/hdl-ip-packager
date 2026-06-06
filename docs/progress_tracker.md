@@ -18,7 +18,7 @@ them to Archive. Convert relative dates to absolute (e.g. "June 2026").
 
 **Active branch**: `main`
 
-**Version**: `0.2.0` — resolver + lockfile (M1+M2); see the Release plan.
+**Version**: `0.3.0` — cache + registries + `install` (M3+M4); see the Release plan.
 
 **Stage**: Foundation. The pure core is implemented, fully typed, linted, and
 unit-tested (151 passing tests, ~96% coverage):
@@ -127,6 +127,13 @@ _None._
 ---
 
 ## Completed Milestones
+
+### Release 0.3.0 — June 2026
+- [x] **Tagged `0.3.0`** per the Release plan: cores can now be fetched from a
+  registry into a verified, content-addressed cache (M3) via local-directory and
+  HTTP backends (M4), with `hdlpkg install` resolving and installing in one step.
+  Bumped `pyproject.toml` + `__init__.py`. (Git/OCI registry backends remain Open
+  Non-Blocking Issues.)
 
 ### M4 — Registry backends (local + HTTP) + `hdlpkg install` — June 2026
 - [x] **Implemented the registry layer and wired `hdlpkg install`.** `registry.py`
