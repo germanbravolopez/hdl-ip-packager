@@ -44,6 +44,7 @@ from .registry import (
     available_from_registry,
 )
 from .resolver import Resolution, resolve
+from .treeview import render_dependency_tree
 from .version import Version, VersionConstraint
 from .vlnv import PackageRef, Vlnv
 
@@ -89,6 +90,7 @@ __all__ = [
     "get_backend",
     "manifest_from_ipkg",
     "pack_core",
+    "render_dependency_tree",
     "resolve",
     "sha256_digest",
     "supported_toolflows",

@@ -21,7 +21,8 @@ tests/
 │   ├── test_precommit_config.py    .pre-commit-config.yaml parses + keeps CI hooks
 │   ├── test_docs_site.py       mkdocs.yml parses + every nav page exists
 │   ├── test_edam.py            build_eda_design: selection, topo order, dedup
-│   └── test_backends.py        Verilator .vc / Vivado .tcl rendering
+│   ├── test_backends.py        Verilator .vc / Vivado .tcl rendering
+│   └── test_treeview.py        render_dependency_tree: ordering + diamond marking
 └── integration/                multi-module / filesystem tests            - marker: integration
     ├── test_manifest_cli_flow.py
     ├── test_resolve_cli.py         hdlpkg resolve end to end on examples/
@@ -30,7 +31,8 @@ tests/
     ├── test_packaging.py           .ipkg pack/extract determinism + safety
     ├── test_pack_cli.py            pack/publish/pull/yank loop
     ├── test_examples.py         validates the bundled examples/ cores
-    └── test_gen_cli.py          hdlpkg gen over examples (resolve → render → write)
+    ├── test_gen_cli.py          hdlpkg gen over examples (resolve → render → write)
+    └── test_tree_cli.py         hdlpkg tree over examples
 ```
 
 There are intentionally **no `__init__.py`** files: the suite runs under pytest's

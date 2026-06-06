@@ -41,7 +41,7 @@ unit-tested (151 passing tests, ~96% coverage):
 - **Backends** — tool-flow generation (`backends/`): a pure EDAM-like intermediate
   (`build_eda_design`) feeding Verilator (`.vc`) and Vivado (`.tcl`) backends.
 - **CLI** — `info`/`validate`/`init`/`resolve`/`install`/`pack`/`publish`/`pull`/
-  `yank`/`gen` work; `export-ipxact`/`add` are wired and report planned status.
+  `yank`/`gen`/`tree` work; `export-ipxact`/`add` are wired and report planned status.
 - **Tooling** — pytest (markers + coverage gate + foldable summary), ruff, mypy
   strict on `src/`, CI workflow, and a cross-platform test-summary renderer.
 
@@ -113,7 +113,6 @@ _None._
 |-------|------|-------|
 | Git-backed registry | `registry.py` | A `Registry` backend resolving cores from a Git channel (tags/refs). Deferred from M4: needs the `git` CLI + a remote to implement and test honestly. Mirror the `LocalDirectoryRegistry`/`HttpRegistry` shape. |
 | OCI artifact registry | `registry.py` | The differentiator backend: store/fetch cores as OCI artifacts (Docker-registry infra). Deferred from M4: needs a live OCI registry (or a mock) and the manifest/blob API; significant standalone work. |
-| `hdlpkg tree` dependency view | `cli.py` | Pretty-print the dependency graph (resolver + registry now exist). |
 | Richer dependency fileset selection | `backends/edam.py` | M6 exports a dependency's `rtl` fileset (or all non-testbench, by name heuristic). Honor `Fileset.depend` and target-scoped fileset deps so a core can declare exactly which filesets it exposes to dependents, rather than relying on the `rtl`/`tb` naming convention. |
 | More tool-flow backends | `backends/` | M6 ships Verilator + Vivado. Add Icarus/Verilator-lint/GHDL (sim) and Quartus/Yosys (synth) backends behind the same `Backend` interface, plus per-target tool options (e.g. extra flags) in `[targets.*]`. |
 
@@ -131,6 +130,20 @@ _None._
 ---
 
 ## Completed Milestones
+
+### `hdlpkg tree` dependency view — June 2026
+- [x] **Added `hdlpkg tree` to print the resolved dependency graph.** A pure
+  `treeview.py` (`render_dependency_tree`) takes the root manifest, the resolver's
+  one-VLNV-per-package selection, and the resolved manifests, and renders an ASCII
+  tree annotating each edge with its constraint and the chosen version
+  (`acme:x:mid ^1.0.0 -> 1.0.0`). A package reached twice (diamonds) is expanded
+  only on first occurrence and later marked `(*)` so the output is finite;
+  unresolved edges are labelled `(unresolved)`. The CLI `tree` command (removed
+  from the planned list) is the thin wrapper: it resolves over `--search` against a
+  `LocalDirectoryRegistry` and prints the tree. Exposed `render_dependency_tree`.
+  Files: `src/hdl_ip_packager/treeview.py`, `src/hdl_ip_packager/cli.py`,
+  `src/hdl_ip_packager/__init__.py`, `tests/unit/test_treeview.py`,
+  `tests/integration/test_tree_cli.py`.
 
 ### M6 — Tool-flow generation (Verilator + Vivado) — June 2026
 - [x] **Implemented tool-flow generation in a new `backends/` package and wired the

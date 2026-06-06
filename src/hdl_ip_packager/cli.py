@@ -26,6 +26,7 @@ from .registry import LocalDirectoryRegistry, LocalRegistry, available_from_regi
 from .resolver import Resolution
 from .resolver import resolve as resolve_deps
 from .scaffold import DEFAULT_VERSION, ScaffoldOptions, render_manifest
+from .treeview import render_dependency_tree
 from .vlnv import Vlnv
 
 # Commands that have a real implementation today. Everything else is a planned
@@ -164,6 +165,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_gen.add_argument("--output", metavar="DIR", help="output directory (default: ./gen/<target>)")
     p_gen.set_defaults(func=_cmd_gen)
+
+    p_tree = sub.add_parser("tree", help="print the resolved dependency graph")
+    p_tree.add_argument(
+        "path", nargs="?", default=MANIFEST_FILENAME, help="path to the root manifest"
+    )
+    p_tree.add_argument(
+        "--search",
+        action="append",
+        metavar="DIR",
+        help="directory to scan for dependency cores (repeatable; default: the "
+        "manifest's parent directory)",
+    )
+    p_tree.set_defaults(func=_cmd_tree)
 
     for name, help_text in _PLANNED.items():
         p = sub.add_parser(name, help=f"[planned] {help_text}")
@@ -362,6 +376,15 @@ def _cmd_gen(args: argparse.Namespace) -> int:
     )
     for dest in written:
         print(f"  {dest}")
+    return 0
+
+
+def _cmd_tree(args: argparse.Namespace) -> int:
+    manifest_path = Path(args.path)
+    root = Manifest.from_path(manifest_path)
+    resolution, registry = _resolve_local(manifest_path, args.search)
+    manifests = {vlnv.ref: registry.manifest(vlnv) for vlnv in resolution.vlnvs}
+    print(render_dependency_tree(root, resolution.selected, manifests))
     return 0
 
 
