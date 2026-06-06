@@ -48,7 +48,7 @@ from .treeview import render_dependency_tree
 from .version import Version, VersionConstraint
 from .vlnv import PackageRef, Vlnv
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 __all__ = [
     "Backend",

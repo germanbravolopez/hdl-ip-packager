@@ -18,7 +18,8 @@ them to Archive. Convert relative dates to absolute (e.g. "June 2026").
 
 **Active branch**: `main`
 
-**Version**: `0.4.0` — packaging + pack/publish/pull (M5); see the Release plan.
+**Version**: `0.5.0` — tool-flow generation: `hdlpkg gen` for Verilator/Vivado (M6);
+see the Release plan.
 
 **Stage**: Foundation. The pure core is implemented, fully typed, linted, and
 unit-tested (151 passing tests, ~96% coverage):
@@ -130,6 +131,12 @@ _None._
 ---
 
 ## Completed Milestones
+
+### Release 0.5.0 — June 2026
+- [x] **Tagged `0.5.0`** per the Release plan: tool-flow generation (M6) — `hdlpkg
+  gen <target>` turns a resolved design into Verilator (`.vc`) or Vivado (`.tcl`)
+  inputs via a pure EDAM-like intermediate, and `hdlpkg tree` prints the resolved
+  dependency graph. Bumped `pyproject.toml` + `__init__.py`.
 
 ### `hdlpkg tree` dependency view — June 2026
 - [x] **Added `hdlpkg tree` to print the resolved dependency graph.** A pure
