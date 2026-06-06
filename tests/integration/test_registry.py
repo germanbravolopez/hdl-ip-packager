@@ -125,13 +125,15 @@ def _serve(directory: Path) -> Iterator[str]:
 
 
 def _write_http_layout(root: Path) -> None:
+    from hdl_ip_packager.packaging import pack_core
+
     core = root / "acme" / "common" / "fifo"
-    (core / "1.0.0").mkdir(parents=True)
+    vdir = core / "1.0.0"
+    vdir.mkdir(parents=True)
     (core / "versions.json").write_text(json.dumps(["1.0.0"]), encoding="utf-8")
-    (core / "1.0.0" / "ip.toml").write_text(
-        '[package]\nvendor="acme"\nlibrary="common"\nname="fifo"\nversion="1.0.0"\n',
-        encoding="utf-8",
-    )
+    manifest_text = '[package]\nvendor="acme"\nlibrary="common"\nname="fifo"\nversion="1.0.0"\n'
+    (vdir / "ip.toml").write_text(manifest_text, encoding="utf-8")
+    (vdir / "core.ipkg").write_bytes(pack_core(Manifest.from_str(manifest_text), vdir))
 
 
 def test_http_registry_versions_manifest_and_fetch(tmp_path: Path) -> None:

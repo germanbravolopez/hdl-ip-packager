@@ -20,7 +20,8 @@ from .cache import ContentAddressedCache, default_cache_root
 from .exceptions import HdlPackagerError, ManifestError
 from .lockfile import LOCKFILE_FILENAME, Lockfile, sha256_digest
 from .manifest import MANIFEST_FILENAME, Manifest
-from .registry import LocalDirectoryRegistry, available_from_registry
+from .packaging import artifact_filename, extract_ipkg, pack_core
+from .registry import LocalDirectoryRegistry, LocalRegistry, available_from_registry
 from .resolver import Resolution
 from .resolver import resolve as resolve_deps
 from .scaffold import DEFAULT_VERSION, ScaffoldOptions, render_manifest
@@ -30,9 +31,6 @@ from .vlnv import Vlnv
 # stub (see docs/progress_tracker.md) and reports as much instead of pretending.
 _PLANNED = {
     "add": "add a dependency to ip.toml",
-    "pack": "package this core into a distributable .ipkg artifact",
-    "publish": "publish this core to a registry",
-    "pull": "download a core from a registry by VLNV",
     "gen": "generate tool/back-end files (EDAM) for a target",
     "export-ipxact": "export an IP-XACT (IEEE 1685) description for tool interop",
 }
@@ -125,6 +123,32 @@ def build_parser() -> argparse.ArgumentParser:
         "--output", help=f"where to write the lockfile (default: ./{LOCKFILE_FILENAME})"
     )
     p_install.set_defaults(func=_cmd_install)
+
+    p_pack = sub.add_parser("pack", help="package this core into a distributable .ipkg")
+    p_pack.add_argument("path", nargs="?", default=MANIFEST_FILENAME, help="path to the manifest")
+    p_pack.add_argument("--output", help="output .ipkg path (default: <vlnv>.ipkg in the cwd)")
+    p_pack.set_defaults(func=_cmd_pack)
+
+    p_publish = sub.add_parser("publish", help="publish this core to a local registry")
+    p_publish.add_argument(
+        "path", nargs="?", default=MANIFEST_FILENAME, help="path to the manifest"
+    )
+    p_publish.add_argument(
+        "--registry", required=True, metavar="DIR", help="registry root directory"
+    )
+    p_publish.set_defaults(func=_cmd_publish)
+
+    p_pull = sub.add_parser("pull", help="download a core from a registry by VLNV")
+    p_pull.add_argument("vlnv", help="the core to pull, e.g. acme:common:fifo:1.0.0")
+    p_pull.add_argument("--registry", required=True, metavar="DIR", help="registry root directory")
+    p_pull.add_argument("--output", metavar="DIR", help="extract the core into this directory")
+    p_pull.add_argument("--cache-dir", metavar="DIR", help="cache root (default: ~/.hdlpkg/cache)")
+    p_pull.set_defaults(func=_cmd_pull)
+
+    p_yank = sub.add_parser("yank", help="hide a published version from new resolves")
+    p_yank.add_argument("vlnv", help="the core version to yank, e.g. acme:common:fifo:1.0.0")
+    p_yank.add_argument("--registry", required=True, metavar="DIR", help="registry root directory")
+    p_yank.set_defaults(func=_cmd_yank)
 
     for name, help_text in _PLANNED.items():
         p = sub.add_parser(name, help=f"[planned] {help_text}")
@@ -248,6 +272,45 @@ def _cmd_install(args: argparse.Namespace) -> int:
     print(f"Installed {len(fetched)} package(s) into {cache_root}; wrote {output}")
     for vlnv in resolution.vlnvs:
         print(f"  {vlnv}")
+    return 0
+
+
+def _cmd_pack(args: argparse.Namespace) -> int:
+    manifest_path = Path(args.path)
+    manifest = Manifest.from_path(manifest_path)
+    data = pack_core(manifest, manifest_path.parent)
+    output = Path(args.output) if args.output else Path(artifact_filename(manifest.vlnv))
+    output.write_bytes(data)
+    print(f"Packed {manifest.vlnv} -> {output} ({len(data)} bytes, {sha256_digest(data)})")
+    return 0
+
+
+def _cmd_publish(args: argparse.Namespace) -> int:
+    manifest_path = Path(args.path)
+    manifest = Manifest.from_path(manifest_path)
+    registry = LocalRegistry(args.registry)
+    vlnv = registry.publish_core(manifest, manifest_path.parent)
+    print(f"Published {vlnv} to {args.registry}")
+    return 0
+
+
+def _cmd_pull(args: argparse.Namespace) -> int:
+    vlnv = Vlnv.parse(args.vlnv)
+    registry = LocalRegistry(args.registry)
+    cache_root = Path(args.cache_dir) if args.cache_dir else default_cache_root()
+    cache = ContentAddressedCache(cache_root)
+    digest = registry.fetch(vlnv, cache)
+    print(f"Pulled {vlnv} into {cache_root} ({digest})")
+    if args.output:
+        dest = extract_ipkg(cache.get(digest), Path(args.output))
+        print(f"Extracted to {dest}")
+    return 0
+
+
+def _cmd_yank(args: argparse.Namespace) -> int:
+    vlnv = Vlnv.parse(args.vlnv)
+    LocalRegistry(args.registry).yank(vlnv)
+    print(f"Yanked {vlnv} in {args.registry}")
     return 0
 
 

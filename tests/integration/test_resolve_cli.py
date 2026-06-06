@@ -14,6 +14,8 @@ import pytest
 from hdl_ip_packager import cli
 from hdl_ip_packager.cache import ContentAddressedCache
 from hdl_ip_packager.lockfile import Lockfile, sha256_digest
+from hdl_ip_packager.registry import LocalDirectoryRegistry
+from hdl_ip_packager.vlnv import Vlnv
 
 pytestmark = pytest.mark.integration
 
@@ -36,8 +38,10 @@ def test_resolve_writes_lockfile_for_examples(tmp_path, capsys: pytest.CaptureFi
 
     fifo = locked["acme:common:fifo:1.0.0"]
     assert fifo.source == "path:examples/fifo"
-    # The recorded checksum is the manifest digest, and it verifies.
-    assert fifo.checksum == sha256_digest(_FIFO.read_bytes())
+    # The recorded checksum is the packed .ipkg digest, and it self-verifies.
+    assert fifo.checksum.startswith("sha256:")
+    registry = LocalDirectoryRegistry([_EXAMPLES])
+    assert fifo.checksum == sha256_digest(registry.artifact_bytes(Vlnv.parse(str(fifo.vlnv))))
     lock.verify({p.vlnv: p.checksum for p in lock.packages})
 
 

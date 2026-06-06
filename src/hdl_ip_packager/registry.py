@@ -34,15 +34,20 @@ from pathlib import Path
 from .cache import ContentAddressedCache
 from .exceptions import HdlPackagerError, RegistryError
 from .manifest import MANIFEST_FILENAME, Manifest
+from .packaging import IPKG_SUFFIX, pack_core
 from .version import Version
 from .vlnv import PackageRef, Vlnv
 
 __all__ = [
     "HttpRegistry",
     "LocalDirectoryRegistry",
+    "LocalRegistry",
     "Registry",
     "available_from_registry",
 ]
+
+_IPKG_NAME = f"core{IPKG_SUFFIX}"
+_YANKED_MARKER = ".yanked"
 
 
 class Registry(abc.ABC):
@@ -110,7 +115,8 @@ class LocalDirectoryRegistry(Registry):
         return Manifest.from_path(self._path(vlnv))
 
     def artifact_bytes(self, vlnv: Vlnv) -> bytes:
-        return self._path(vlnv).read_bytes()
+        path = self._path(vlnv)
+        return pack_core(Manifest.from_path(path), path.parent)
 
     def source_for(self, vlnv: Vlnv) -> str:
         """The lockfile ``source`` string for *vlnv* (a local path reference)."""
@@ -147,13 +153,75 @@ class HttpRegistry(Registry):
             raise RegistryError(f"Malformed versions index at {url}: {exc}") from exc
 
     def manifest(self, vlnv: Vlnv) -> Manifest:
+        raw = self._get(f"{self._core_url(vlnv)}/{MANIFEST_FILENAME}")
         try:
-            return Manifest.from_str(self.artifact_bytes(vlnv).decode("utf-8"))
+            return Manifest.from_str(raw.decode("utf-8"))
         except (UnicodeDecodeError, HdlPackagerError) as exc:
             raise RegistryError(f"Invalid manifest for {vlnv}: {exc}") from exc
 
     def artifact_bytes(self, vlnv: Vlnv) -> bytes:
-        return self._get(f"{self._core_url(vlnv)}/{MANIFEST_FILENAME}")
+        return self._get(f"{self._core_url(vlnv)}/{_IPKG_NAME}")
+
+
+class LocalRegistry(Registry):
+    """A writable local registry with a structured, append-only on-disk layout.
+
+    Layout: ``<root>/<vendor>/<library>/<name>/<version>/`` holding ``ip.toml`` and
+    ``core.ipkg``; a ``.yanked`` marker hides a version from new resolves without
+    deleting it (so existing lockfiles still verify). Publishing is **append-only**:
+    re-publishing an existing version is refused.
+    """
+
+    def __init__(self, root: str | Path) -> None:
+        self.root = Path(root)
+
+    def _dir(self, vlnv: Vlnv) -> Path:
+        return self.root / vlnv.vendor / vlnv.library / vlnv.name / str(vlnv.version)
+
+    def versions(self, ref: PackageRef) -> list[Vlnv]:
+        base = self.root / ref.vendor / ref.library / ref.name
+        if not base.is_dir():
+            return []
+        found: list[Vlnv] = []
+        for entry in sorted(base.iterdir()):
+            if not entry.is_dir() or (entry / _YANKED_MARKER).exists():
+                continue
+            try:
+                found.append(ref.with_version(Version.parse(entry.name)))
+            except HdlPackagerError:
+                continue
+        return found
+
+    def manifest(self, vlnv: Vlnv) -> Manifest:
+        path = self._dir(vlnv) / MANIFEST_FILENAME
+        if not path.is_file():
+            raise RegistryError(f"{vlnv} is not in registry {self.root}.")
+        return Manifest.from_path(path)
+
+    def artifact_bytes(self, vlnv: Vlnv) -> bytes:
+        path = self._dir(vlnv) / _IPKG_NAME
+        try:
+            return path.read_bytes()
+        except OSError as exc:
+            raise RegistryError(f"{vlnv} artifact is not in registry {self.root}: {exc}") from exc
+
+    def publish_core(self, manifest: Manifest, core_dir: str | Path) -> Vlnv:
+        """Pack the core at *core_dir* and publish it; refuse to overwrite a version."""
+        vlnv = manifest.vlnv
+        dest = self._dir(vlnv)
+        if dest.exists():
+            raise RegistryError(f"{vlnv} is already published (registries are append-only).")
+        dest.mkdir(parents=True)
+        (dest / MANIFEST_FILENAME).write_bytes((Path(core_dir) / MANIFEST_FILENAME).read_bytes())
+        (dest / _IPKG_NAME).write_bytes(pack_core(manifest, core_dir))
+        return vlnv
+
+    def yank(self, vlnv: Vlnv) -> None:
+        """Hide *vlnv* from new resolves (idempotent); raise if it was never published."""
+        dest = self._dir(vlnv)
+        if not dest.is_dir():
+            raise RegistryError(f"Cannot yank {vlnv}: it is not published in {self.root}.")
+        (dest / _YANKED_MARKER).touch()
 
 
 def available_from_registry(registry: Registry, root: Manifest) -> dict[PackageRef, list[Manifest]]:

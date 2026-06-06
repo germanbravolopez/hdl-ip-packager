@@ -34,7 +34,8 @@ quick-find reference.
 | Resolver | `src/hdl_ip_packager/resolver.py` | implemented |
 | Lockfile (`ip.lock`) | `src/hdl_ip_packager/lockfile.py` | implemented |
 | Content-addressed cache | `src/hdl_ip_packager/cache.py` | implemented |
-| Registry (local + HTTP) | `src/hdl_ip_packager/registry.py` | implemented |
+| Registry (local + HTTP + writable) | `src/hdl_ip_packager/registry.py` | implemented |
+| Packaging (`.ipkg`) | `src/hdl_ip_packager/packaging.py` | implemented |
 
 ## Tooling & build files
 
@@ -68,6 +69,8 @@ quick-find reference.
 | `tests/integration/test_resolve_cli.py` | `hdlpkg resolve` end to end on the bundled examples |
 | `tests/integration/test_cache.py` | Content-addressed cache: round-trip, dedup, verify-on-read corruption |
 | `tests/integration/test_registry.py` | Local + HTTP registries, graph walker, `install` fetch-into-cache |
+| `tests/integration/test_packaging.py` | `.ipkg` pack determinism, round-trip, path-traversal guard |
+| `tests/integration/test_pack_cli.py` | `pack`/`publish`/`pull`/`yank` CLI loop against a local registry |
 | `tests/unit/test_docs_site.py` | `mkdocs.yml` parses and every `nav` page exists under `docs/` |
 | `tests/unit/test_precommit_config.py` | `.pre-commit-config.yaml` parses and keeps the CI-mirroring hooks |
 | `tests/unit/test_check_release_version.py` | Release version guard: tag-to-version parsing + tag/package match check |
@@ -84,9 +87,10 @@ quick-find reference.
 | `hdlpkg add <vlnv>` | planned | Add a dependency to `ip.toml` |
 | `hdlpkg resolve [path] [--search DIR] [--output]` | implemented | Resolve deps against a local registry, write `ip.lock` |
 | `hdlpkg install [path] [--search] [--cache-dir]` | implemented | Resolve + fetch into the content-addressed cache (verified) |
-| `hdlpkg pack` | planned | Build a `.ipkg` artifact |
-| `hdlpkg publish` | planned | Publish to a registry |
-| `hdlpkg pull <vlnv>` | planned | Download a core by VLNV |
+| `hdlpkg pack [path] [--output]` | implemented | Build a deterministic `.ipkg` artifact |
+| `hdlpkg publish [path] --registry DIR` | implemented | Publish a core to a local registry (append-only) |
+| `hdlpkg pull <vlnv> --registry DIR [--output]` | implemented | Fetch a core by VLNV into the cache; optionally extract |
+| `hdlpkg yank <vlnv> --registry DIR` | implemented | Hide a published version from new resolves |
 | `hdlpkg gen <target>` | planned | Generate tool/back-end files (EDAM) |
 | `hdlpkg export-ipxact` | planned | Export IP-XACT (IEEE 1685) for tool interop |
 
@@ -98,6 +102,8 @@ quick-find reference.
 | **PackageRef** | The version-less `vendor:library:name` triple (a dependency key) |
 | **Manifest** | The per-core `ip.toml` declaring identity, deps, filesets, targets |
 | **Lockfile** | `ip.lock` — generated exact-version + integrity record (one `[[package]]` per dep) |
+| **`.ipkg`** | The deterministic, distributable package of a core (gzip+tar of manifest + fileset files) |
+| **Yank** | Hide a published version from new resolves without deleting it (old lockfiles still verify) |
 | **Fileset** | A named group of HDL source files of one type |
 | **Target** | A build config: which filesets feed which tool flow + the top unit |
 | **Tool flow** | A back-end (Verilator, Vivado, …) the packager generates inputs for |

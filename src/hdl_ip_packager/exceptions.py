@@ -37,5 +37,9 @@ class LockfileError(HdlPackagerError):
     """An ``ip.lock`` lockfile is malformed, or its integrity check failed."""
 
 
+class PackagingError(HdlPackagerError):
+    """Building or extracting an ``.ipkg`` artifact failed."""
+
+
 class RegistryError(HdlPackagerError):
     """A registry/cache operation (fetch, publish, lookup) failed."""

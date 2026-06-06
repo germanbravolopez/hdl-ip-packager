@@ -43,14 +43,16 @@ Implemented today:
 - **Content-addressed cache + registries** — a SHA-256-keyed local cache with
   verify-on-read, fed by local-directory and HTTP registry backends; `hdlpkg
   install` resolves and fetches dependencies into it.
-- **CLI (`hdlpkg`)** — `info`, `validate`, `init`, `resolve`, and `install` work
-  today; the rest of the command surface is wired and reports its planned status.
+- **Packaging + distribution** — a deterministic `.ipkg` artifact with `pack`,
+  append-only `publish` (with `yank`), and `pull` (fetch by VLNV into the cache).
+- **CLI (`hdlpkg`)** — `info`, `validate`, `init`, `resolve`, `install`, `pack`,
+  `publish`, `pull`, and `yank` work today; the rest is wired and reports planned
+  status.
 
 Designed and on the roadmap (see the progress tracker):
 
 - Additional **registries** (Git-backed channel, OCI artifact registry).
-- **Packaging** (`.ipkg`), **publish/pull**, tool-flow **generation** (EDAM), and
-  **IP-XACT export** for Vivado/other-tool interop.
+- Tool-flow **generation** (EDAM) and **IP-XACT export** for Vivado/other-tool interop.
 
 ---
 
@@ -85,6 +87,9 @@ hdlpkg info ip.toml           # print the parsed identity, deps, filesets, targe
 hdlpkg validate ip.toml       # parse + validate a manifest (exit 0 if OK)
 hdlpkg resolve ip.toml --search ../cores   # resolve deps to a deterministic ip.lock
 hdlpkg install ip.toml --search ../cores   # resolve + fetch deps into the cache
+hdlpkg pack ip.toml                         # build a distributable .ipkg
+hdlpkg publish ip.toml --registry ../reg    # publish into a local registry
+hdlpkg pull acme:common:fifo:1.0.0 --registry ../reg --output ./fifo
 python -m hdl_ip_packager info   # same CLI, invoked as a module
 ```
 

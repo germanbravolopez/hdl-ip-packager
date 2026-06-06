@@ -48,7 +48,8 @@ All source lives under [src/hdl_ip_packager/](../src/hdl_ip_packager/).
 | Resolver | [resolver.py](../src/hdl_ip_packager/resolver.py) | implemented | Constraints → one concrete `Vlnv` per package (backtracking, newest-compatible) |
 | Lockfile | [lockfile.py](../src/hdl_ip_packager/lockfile.py) | implemented | Serialize/parse/verify `ip.lock` (a `Resolution` + per-core source + SHA-256) |
 | Cache | [cache.py](../src/hdl_ip_packager/cache.py) | implemented | Content-addressed local blob store (SHA-256 key, verify-on-read, atomic writes) |
-| Registry | [registry.py](../src/hdl_ip_packager/registry.py) | implemented (local + HTTP) | Abstract `Registry` + local-dir and HTTP backends + graph walker (Git/OCI tracked as issues) |
+| Registry | [registry.py](../src/hdl_ip_packager/registry.py) | implemented (local + HTTP) | Abstract `Registry` + local-dir/HTTP/writable-local backends + graph walker (Git/OCI tracked as issues) |
+| Packaging | [packaging.py](../src/hdl_ip_packager/packaging.py) | implemented | Build/read the deterministic `.ipkg` artifact (`pack_core`, `extract_ipkg`) |
 
 The dependency direction is strictly one-way and acyclic:
 
@@ -161,8 +162,17 @@ immutable, ubiquitous). Publishing (append-only with **yank**) lands with M5.
 A core's "artifact" is its manifest bytes until packaging (M5) defines the packed
 form; the interface does not change when it does.
 
-### Packaging & backends *(planned)*
-- `pack` → a distributable `.ipkg` artifact (sources + manifest + integrity).
+### Packaging *(implemented — [packaging.py](../src/hdl_ip_packager/packaging.py))*
+`pack_core` builds a **deterministic** `.ipkg` (a gzip+tar of `ip.toml` plus every
+fileset file, with sorted entries, fixed mode/owner, zero mtime and gzip header),
+so a core always packs to byte-identical bytes and its SHA-256 is a stable content
+address. `extract_ipkg` unpacks it with path-traversal protection. The `.ipkg` is
+now the unit the registry serves, the cache stores, and the lockfile pins (the
+checksum is the packed-content digest). The CLI exposes `pack`, `publish`
+(append-only into a writable `LocalRegistry`, with `yank` to retire a version
+without breaking old lockfiles), and `pull` (fetch by VLNV into the cache, extract).
+
+### Backends *(planned)*
 - `gen` → an EDAM-like intermediate that feeds simulators/synthesis (FuseSoC's
   tool-flow abstraction), keeping tool specifics out of the core.
 - `export-ipxact` → IEEE 1685 XML for Vivado/other-tool interop.

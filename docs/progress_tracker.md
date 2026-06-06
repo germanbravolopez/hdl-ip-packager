@@ -33,16 +33,17 @@ unit-tested (151 passing tests, ~96% coverage):
   with per-core source + SHA-256), written by `hdlpkg resolve`.
 - **Cache** — content-addressed local blob store (SHA-256 key, verify-on-read,
   atomic writes), populated by `hdlpkg install`.
-- **Registry** — `Registry` interface + `LocalDirectoryRegistry` and `HttpRegistry`
-  backends + a dependency-graph walker feeding the resolver (Git/OCI backends are
-  open Non-Blocking issues).
-- **CLI** — `hdlpkg info`/`validate`/`init`/`resolve`/`install` work (`install`
-  resolves and fetches deps into the verified cache); `pack`/`publish`/`pull`/`gen`/
-  `export-ipxact`/`add` are wired and report planned status.
+- **Registry** — `Registry` interface + `LocalDirectoryRegistry`, `HttpRegistry`,
+  and writable `LocalRegistry` (append-only + yank) backends + a dependency-graph
+  walker feeding the resolver (Git/OCI backends are open Non-Blocking issues).
+- **Packaging** — deterministic `.ipkg` artifact (`pack_core`/`extract_ipkg`); the
+  packed-content digest is what the cache and lockfile pin.
+- **CLI** — `info`/`validate`/`init`/`resolve`/`install`/`pack`/`publish`/`pull`/
+  `yank` work; `gen`/`export-ipxact`/`add` are wired and report planned status.
 - **Tooling** — pytest (markers + coverage gate + foldable summary), ruff, mypy
   strict on `src/`, CI workflow, and a cross-platform test-summary renderer.
 
-**Next**: implement **`pack` / `publish` / `pull`** (Roadmap M5), which ships as `0.4.0`.
+**Next**: implement **Tool-flow generation** (Roadmap M6), which ships as `0.5.0`.
 
 ---
 
@@ -54,7 +55,6 @@ unit-tested (151 passing tests, ~96% coverage):
 
 | # | Milestone | Scope | Key files |
 |---|-----------|-------|-----------|
-| M5 | **`pack` / `publish` / `pull`** | Build `.ipkg`; append-only publish with yank; fetch by VLNV. | `cli.py`, `packaging.py` (new) |
 | M6 | **Tool-flow generation** | EDAM-like intermediate → simulator/synth inputs (start: Verilator, Vivado). | `backends/` (new) |
 | M7 | **IP-XACT export** | IEEE 1685 XML for Vivado/other-tool interop. | `ipxact.py` (new) |
 | M8 | **Supply-chain** | Sigstore (cosign) signing + SBOM at `pack` time. | `packaging.py` |
@@ -127,6 +127,29 @@ _None._
 ---
 
 ## Completed Milestones
+
+### M5 — `pack` / `publish` / `pull` (+ `.ipkg`, yank) — June 2026
+- [x] **Implemented packaging and the distribution commands.** New `packaging.py`
+  builds a **deterministic** `.ipkg` (gzip+tar of `ip.toml` + every fileset file,
+  with sorted entries, fixed mode/owner, and zeroed mtime/gzip header) so a core
+  always packs to byte-identical bytes and its SHA-256 is a stable content address;
+  `extract_ipkg` unpacks with path-traversal protection, and `manifest_from_ipkg`
+  reads the manifest back. The `.ipkg` is now the **unified artifact** across the
+  stack: `Registry.artifact_bytes` returns it (the local backend packs on read, the
+  HTTP backend serves `core.ipkg`), so the cache key and lockfile checksum are the
+  packed-content digest (replacing the M2 manifest-bytes stopgap). A new writable
+  `LocalRegistry` stores cores under `<root>/<vendor>/<library>/<name>/<version>/`
+  with `ip.toml` + `core.ipkg`; publishing is **append-only** (re-publish refused)
+  and `yank` drops a `.yanked` marker that hides a version from new resolves without
+  breaking existing lockfiles. CLI: `pack`, `publish`, `pull` (fetch by VLNV into
+  the cache, optionally extract), and `yank` (now real, removed from the planned
+  stubs). Added `PackagingError`; exposed the packaging + `LocalRegistry` API.
+  Verified the full pack -> publish -> pull loop end to end with matching digests.
+  Files: `src/hdl_ip_packager/packaging.py`, `src/hdl_ip_packager/registry.py`,
+  `src/hdl_ip_packager/cli.py`, `src/hdl_ip_packager/exceptions.py`,
+  `src/hdl_ip_packager/__init__.py`, `tests/integration/test_packaging.py`,
+  `tests/integration/test_pack_cli.py`, `tests/integration/test_registry.py`,
+  `tests/integration/test_resolve_cli.py`, `tests/unit/test_cli.py`.
 
 ### Release 0.3.0 — June 2026
 - [x] **Tagged `0.3.0`** per the Release plan: cores can now be fetched from a

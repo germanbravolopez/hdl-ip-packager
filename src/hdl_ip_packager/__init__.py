@@ -19,14 +19,17 @@ from .exceptions import (
     InvalidVlnvError,
     LockfileError,
     ManifestError,
+    PackagingError,
     RegistryError,
     ResolutionError,
 )
 from .lockfile import LockedPackage, Lockfile, sha256_digest
 from .manifest import Dependency, Fileset, Manifest, Target
+from .packaging import artifact_filename, extract_ipkg, manifest_from_ipkg, pack_core
 from .registry import (
     HttpRegistry,
     LocalDirectoryRegistry,
+    LocalRegistry,
     Registry,
     available_from_registry,
 )
@@ -46,12 +49,14 @@ __all__ = [
     "InvalidVersionError",
     "InvalidVlnvError",
     "LocalDirectoryRegistry",
+    "LocalRegistry",
     "LockedPackage",
     "Lockfile",
     "LockfileError",
     "Manifest",
     "ManifestError",
     "PackageRef",
+    "PackagingError",
     "Registry",
     "RegistryError",
     "Resolution",
@@ -61,8 +66,12 @@ __all__ = [
     "VersionConstraint",
     "Vlnv",
     "__version__",
+    "artifact_filename",
     "available_from_registry",
     "default_cache_root",
+    "extract_ipkg",
+    "manifest_from_ipkg",
+    "pack_core",
     "resolve",
     "sha256_digest",
 ]

@@ -25,6 +25,8 @@ tests/
     ├── test_resolve_cli.py         hdlpkg resolve end to end on examples/
     ├── test_cache.py               content-addressed cache (verify-on-read)
     ├── test_registry.py            local + HTTP registries, graph walk, install
+    ├── test_packaging.py           .ipkg pack/extract determinism + safety
+    ├── test_pack_cli.py            pack/publish/pull/yank loop
     └── test_examples.py         validates the bundled examples/ cores
 ```
 
