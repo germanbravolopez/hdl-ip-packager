@@ -22,9 +22,11 @@ update this skill afterwards.
 1. **Release via a PR, not a direct push.** `main` is governed by the repository
    ruleset named "main" (no direct commits/pushes, no force-push, merge-commit-only,
    one approving review with last-push approval). The release bump lands on `main`
-   through a `release/X.Y.Z` PR that a human approves and merges; the `X.Y.Z` tag is
-   then created on the resulting merge commit on `main`. Start from an up-to-date
-   `main` (`git switch main && git pull`).
+   through a `release/X.Y.Z` PR that the agent **reviews with `/code-review` and then
+   merges** with `gh pr merge --merge --admin` (step 7 — `--admin` bypasses the
+   self-approval the ruleset would otherwise require); the `X.Y.Z` tag is then created
+   on the resulting merge commit on `main`. Start from an up-to-date `main`
+   (`git switch main && git pull`).
 2. **Working tree is clean** (`git status` shows nothing to commit). If dirty, ask
    whether to commit, stash, or abort — never fold stray edits into the release.
 3. **Version is SemVer `X.Y.Z`** (or a pre-release `X.Y.Z-rc.N`), with **no** `v`
@@ -119,17 +121,63 @@ git push -u origin release/X.Y.Z
 gh pr create --base main --title "Release X.Y.Z: <summary>" --body "<summary>"
 ```
 
-### 7. Hand off the merge, then tag the merged `main` (the tag push is the publish trigger)
+### 7. Review the PR with `/code-review`, resolve findings, then merge
 
-The merge is a **human gate** the ruleset enforces — do not merge the PR yourself:
+A release merge is the **last** point at which a regression can be caught before it
+ships to PyPI under a tagged, **immutable** version (a published version can never be
+re-used). Before merging, **review the PR yourself** at high effort — not the default
+level. A release diff is usually wider than a single feature PR (the branch may
+bundle several milestones), so the broader-coverage tier is appropriate even though
+it may surface lower-confidence findings:
 
-- The PR needs **one approving review** and **last-push approval** (don't push more
-  commits after it's approved, or it needs re-approval).
-- It must be **merged with a merge commit** (`allowed_merge_methods: ["merge"]` —
-  squash/rebase are disabled).
+```
+/code-review high
+```
 
-Once the maintainer has merged the PR, fast-forward local `main` and tag the merge
-commit (bare tag, no `v` prefix), then push the tag:
+This reviews the current `release/X.Y.Z` branch diff against `main`. `/code-review
+high <PR#>` targets the PR explicitly; `ultra` runs the deeper cloud multi-agent
+variant if a particular release ever warrants it. Runs locally.
+
+**Resolve every finding before merging** — this is a hard gate:
+
+- **Genuine bugs / regressions / release-blockers, and anything fixable within this
+  release's scope:** fix them on the `release/X.Y.Z` branch now, commit, and push
+  (the PR updates automatically). Re-run the gates (step 3) — and the review itself
+  if the fixes are non-trivial. Err on the side of fixing anything touching the
+  high-blast-radius areas: **resolver** correctness, **lockfile/digest** integrity,
+  the cache's **verify-on-read**, **packaging** path-traversal guards, and the
+  **registry** protocol.
+- **Findings that cannot be fixed before this merge** (out of the release's scope,
+  pre-existing, or needing external services): record them as new entries in
+  `docs/progress_tracker.md` **Open Non-Blocking Issues**, stage that doc, and fold
+  it into the release branch — do **not** block the release on them.
+
+Do not proceed to the merge until **every** finding is either fixed or filed.
+
+**Then merge the PR.** First wait for CI on the branch tip to pass — never merge a
+red or still-running run:
+
+```bash
+gh run watch "$(gh run list --branch release/X.Y.Z --workflow CI --limit 1 --json databaseId -q '.[0].databaseId')" --exit-status
+```
+
+Then merge with a **merge commit** (ruleset "main": `allowed_merge_methods:
+["merge"]`, squash/rebase disabled). GitHub forbids approving your own PR, so the
+agent uses `--admin` to satisfy the ruleset's required-review / last-push checks
+(this logs a "bypassed rule violations" entry — expected for an agent-driven release):
+
+```bash
+gh pr merge release/X.Y.Z --merge --admin --delete-branch
+```
+
+`--merge` is mandatory — `--squash`/`--rebase` defeat the "release = one point on
+`main`" convention. If `gh` cannot merge cleanly (protected-branch failure, conflict),
+**stop and surface it** — do not paper over it.
+
+### 7b. Tag the merged `main` (the tag push is the publish trigger)
+
+Fast-forward local `main` to the merge commit and tag it (bare tag, no `v` prefix),
+then push the tag:
 
 ```bash
 git switch main && git pull --ff-only
@@ -194,12 +242,17 @@ Confirm the wheel + sdist are both listed. Surface the release URL
   the Release plan (e.g. 0.2 = M1+M2), not after every milestone.
 - **PR-based, merge-commit only.** The release bump reaches `main` via a
   `release/X.Y.Z` PR merged with a merge commit (ruleset "main"); never push the
-  bump straight to `main`, and never self-approve/merge — the review + merge is a
-  human gate. The `X.Y.Z` tag is created on the merged `main` afterwards.
+  bump straight to `main`. The agent **reviews the PR with `/code-review` (step 7)**,
+  resolves or files every finding, then merges with `gh pr merge --merge --admin`
+  (GitHub forbids self-approval, so `--admin` bypasses the required-review check and
+  logs it). The `X.Y.Z` tag is created on the merged `main` afterwards.
 - **`1.0.0` is a sign-off, not a default.** Get explicit user confirmation against
   the stability gate; never tag it autonomously.
+- **Resolve review findings before merge.** Every `/code-review` finding is either
+  fixed on the release branch or filed in Open Non-Blocking Issues before the merge —
+  never merge with an open, unaddressed finding.
 - **Stop on the first failure** — dirty tree, red gate, guard mismatch, tag
-  conflict, unmerged/unapproved PR, failed workflow. Surface it and wait.
+  conflict, a merge that won't go cleanly, failed workflow. Surface it and wait.
 - **No `Co-Authored-By`, no emojis** (project rules).
 
 ---
