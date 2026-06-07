@@ -48,21 +48,29 @@ truth for what is done versus planned.
 
 ## Branch & merge workflow
 
-`main` is governed by the repository ruleset named **"main"**: **no direct commits
-or pushes to `main`**, no force-push, no deletion. Every change — including release
-bumps — reaches `main` through a pull request:
+Day-to-day work lands on **`develop`**, the working branch — commit directly (or via
+a short-lived feature branch you merge into it); **no PR for normal work**. `main` is
+the protected release line (ruleset "main": no direct commits/pushes, no force-push,
+no deletion, merge-commit-only), updated **only through the release flow**:
 
-1. Branch off `main` (`feature/`, `fix/`, `docs/`, or `release/X.Y.Z`); never commit
-   on `main` itself.
-2. Make the quality gates green, push the branch, and open a PR (`gh pr create`).
-   CI runs on the PR and Copilot reviews it.
-3. The PR needs **one approving review** and **last-push approval**, then is **merged
-   with a merge commit** — squash and rebase are disabled
-   (`allowed_merge_methods: ["merge"]`).
+1. Do the work on `develop`; make the quality gates green and commit. **No PR** —
+   the accumulated `develop` diff is reviewed at the next release.
+2. At release time, cut `release/X.Y.Z` off `develop`, bump the version, push, and
+   open a PR into `main` (`gh pr create`). CI runs on the PR.
+3. Once CI is green, **review the PR with `/code-review`** and resolve every finding —
+   fix it, or, if it's out of this release's scope, file it in
+   `docs/progress_tracker.md` Open Non-Blocking Issues. Never merge with an open,
+   unaddressed finding.
+4. **Merge with a merge commit** — `gh pr merge --merge --admin` (squash and rebase
+   are disabled, `allowed_merge_methods: ["merge"]`; GitHub forbids approving your own
+   PR, so `--admin` satisfies the required-review / last-push check and logs the
+   bypass) — then **tag the merged `main`** and fast-forward `develop` to it.
 
-Review and merge are a **human gate**: agents prepare the branch + PR and stop
-there. The `/tackle-issue` and `/release` commands encode this flow; releases tag
-the merged commit on `main` afterwards (see [README](../README.md) -> Releasing).
+**Defer to a human gate only when the agent cannot safely decide on its own** — the
+`1.0.0` stability sign-off, a security-sensitive or hard-to-reverse change, or
+anything the user has explicitly reserved; there, prepare the branch + PR and stop.
+The `/tackle-issue` and `/release` commands encode this flow (see
+[README](../README.md) -> Releasing).
 
 ## File map — where to find what
 

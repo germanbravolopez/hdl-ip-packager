@@ -152,6 +152,31 @@ _None._
 
 ## Completed Milestones
 
+### Branch model + agent-driven release flow + GitHub Release on tag — June 2026
+- [x] **Adopted a `develop` (working) + `main` (release line) branch model; PRs are
+  release-only.** Day-to-day work now commits directly to `develop` with **no PR**
+  (`/tackle-issue` step 7 just makes the gates green and commits). `main` is the
+  protected release line, updated **only** through the release flow: a `release/X.Y.Z`
+  PR cut off `develop`, which — once CI is green — the agent **reviews with
+  `/code-review`** (fixing in-scope findings, filing out-of-scope ones in Open
+  Non-Blocking Issues) and **merges** with a merge commit (`gh pr merge --merge
+  --admin`; GitHub forbids self-approval, so `--admin` satisfies the ruleset and logs
+  the bypass), then tags `main` and fast-forwards `develop`. A **human gate applies
+  only when the agent cannot safely decide on its own** — the `1.0.0` sign-off, a
+  security-sensitive or hard-to-reverse change, or anything the user reserved.
+  Mirrors the reference project's `develop`/`master` split. Updated `CLAUDE.md`,
+  `docs/ai_agent_instructions.md`, `README.md`, `.claude/commands/release.md`, and
+  `.claude/commands/tackle-issue.md`.
+- [x] **`release.yml` creates a GitHub Release for each tag.** A new `github-release`
+  job (gated on `needs: publish`, so it only announces what reached PyPI) builds the
+  body from the tag's `docs/progress_tracker.md` entry plus a link to the PyPI page
+  and attaches the wheel + sdist. The body logic is a pure, unit-tested helper
+  (`scripts/extract_release_notes.py`: `extract_section` / `build_release_body`,
+  falling back to a one-line summary when the tracker has no entry, e.g. a
+  pre-release). Pre-release tags (`X.Y.Z-rc.N`) are marked `--prerelease`. Files:
+  `.github/workflows/release.yml`, `scripts/extract_release_notes.py`,
+  `tests/unit/test_extract_release_notes.py`, `docs/INDEX.md`.
+
 ### Release 0.8.0 — June 2026
 - [x] **Tagged `0.8.0`** per the Release plan: ships the pre-1.0 completeness pass +
   the non-blocking/backlog batch that landed on `main` after the `0.7.0` tag —

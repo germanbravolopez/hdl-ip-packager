@@ -80,16 +80,17 @@ A passing import proves the code loads; the test suite is what proves the change
 - Watch the Windows gotcha from `CLAUDE.md`: `os.chdir` into a `%TEMP%` dir can fail with WinError 5 (Controlled Folder Access). Don't write tests that rely on `chdir` into temp; skip gracefully if one truly must.
 - If a change genuinely cannot be unit-tested (pure CLI wiring), state that explicitly in the commit + milestone and note what a future harness would need — don't silently skip coverage.
 
-### 7. Commit on a branch, then open a PR into `main`
+### 7. Commit (on `develop` — no PR)
 
-`main` is governed by the repository ruleset named **"main"**: **no direct commits
-or pushes to `main`**, no force-push, no deletion. Every change reaches `main`
-through a pull request that is reviewed and merged with a **merge commit**.
+Normal work lands on **`develop`**, the working branch — **no PR** (a PR is only for
+a release, `develop` → `main`; see `/release`). `main` is the protected release line;
+never commit on it directly.
 
-- **Branch off `main` first** — `git checkout -b <type>/<slug>` (`feature/`, `fix/`,
-  or `docs/`). Never commit on `main` itself.
-- **Commit message**: single-line subject, hard cap ~200 characters — no body. If
-  the explanation doesn't fit, the long-form belongs in the `docs/progress_tracker.md`
+- **Commit on `develop`** (or a short-lived `feature/`/`fix/`/`docs/` branch you then
+  merge into `develop`). The accumulated `develop` diff is reviewed at the next
+  release, so a per-change PR is not needed.
+- **Commit message**: single-line subject, hard cap ~200 characters — no body. If the
+  explanation doesn't fit, the long-form belongs in the `docs/progress_tracker.md`
   milestone you wrote in step 5, not in the message. **No `Co-Authored-By` line**
   (project rule). No emojis.
 - **Stage only the files this change touched.** Never `git add -A` / `git add .` —
@@ -97,18 +98,17 @@ through a pull request that is reviewed and merged with a **merge commit**.
   them alone and call them out in your final message.
 - **Never `--amend`** a commit the user has already seen or that has been pushed.
   Create a new commit instead.
-- **Push the branch and open a PR into `main`** (`gh pr create`). CI runs on the PR
-  and Copilot reviews it automatically.
+- **Push `develop`.** CI runs on the push.
 
-Then **stop and hand off the merge** — it is a human gate per the ruleset:
+After the commit:
 
-- The PR needs **one approving review**, and **the last push must be approved**
-  (push before requesting review; a commit added after approval needs re-approval).
-- It must be **merged with a merge commit** — squash and rebase are disabled
-  (`allowed_merge_methods: ["merge"]`). Do not attempt to merge it yourself.
-- Run `git status` to confirm only the intended files changed (flag, don't fold in,
-  any pre-existing `M` files). Output the branch name, the PR URL, and a short
-  summary, and note that it awaits review + merge.
+- Run `git status` to confirm no remaining modifications to the files this change
+  touched (pre-existing unrelated `M` files are fine — flag them, don't fold them in).
+- Output the commit hash and a short summary.
+
+**Defer to a human gate only when you cannot safely decide on your own** — a
+security-sensitive or hard-to-reverse change, or anything the user reserved. There,
+stop and surface it rather than committing.
 
 ---
 
