@@ -100,15 +100,26 @@ through a pull request that is reviewed and merged with a **merge commit**.
 - **Push the branch and open a PR into `main`** (`gh pr create`). CI runs on the PR
   and Copilot reviews it automatically.
 
-Then **stop and hand off the merge** — it is a human gate per the ruleset:
+Then **review the PR yourself and merge it** — the agent owns this by default:
 
-- The PR needs **one approving review**, and **the last push must be approved**
-  (push before requesting review; a commit added after approval needs re-approval).
-- It must be **merged with a merge commit** — squash and rebase are disabled
-  (`allowed_merge_methods: ["merge"]`). Do not attempt to merge it yourself.
-- Run `git status` to confirm only the intended files changed (flag, don't fold in,
-  any pre-existing `M` files). Output the branch name, the PR URL, and a short
-  summary, and note that it awaits review + merge.
+- **Wait for CI to go green** on the branch tip (`gh run watch ... --exit-status`);
+  never merge a red or still-running run.
+- **Review the diff with `/code-review`** and resolve every finding: fix genuine
+  bugs / in-scope issues on the branch (re-run the gates, and the review if the fix
+  is non-trivial); record anything out of scope in `docs/progress_tracker.md` Open
+  Non-Blocking Issues. Do not merge with an open, unaddressed finding.
+- **Merge with a merge commit** — `gh pr merge <branch> --merge --admin`
+  (squash/rebase disabled, `allowed_merge_methods: ["merge"]`; GitHub forbids
+  self-approval, so `--admin` satisfies the required-review / last-push check and
+  logs the bypass).
+- Before merging, run `git status` to confirm only the intended files changed (flag,
+  don't fold in, any pre-existing `M` files). Output the branch name, the PR URL, and
+  a short summary.
+
+**Defer to a human gate only when you cannot safely decide on your own** — a
+security-sensitive or hard-to-reverse change, an unresolved review finding you can't
+adjudicate, or anything the user reserved. There, stop after opening the PR and say
+it awaits human review + merge.
 
 ---
 

@@ -3,9 +3,11 @@
 Executes this project's tag-driven release flow: bump the version, make the gates
 green, record the release in the tracker, commit, then **tag** the commit — which
 triggers [`.github/workflows/release.yml`](../../.github/workflows/release.yml) to
-build the wheel + sdist and publish them to PyPI via OIDC trusted publishing. The
-build/publish steps are never run by hand; this skill drives the bump/commit/tag,
-pushes, and then watches the workflows to green.
+build the wheel + sdist, publish them to PyPI via OIDC trusted publishing, and create
+a **GitHub Release** for the tag (a short summary from the `docs/progress_tracker.md`
+entry + a link to the PyPI page, with the dists attached). The build/publish steps
+are never run by hand; this skill drives the bump/review/merge/tag, pushes, and then
+watches the workflows to green.
 
 Use when the user says "release X.Y.Z", "ship X.Y.Z", "cut X.Y.Z", or "do the
 release for milestone M_n". Reject if no version is given — ask for it.
@@ -225,9 +227,14 @@ Confirm the wheel + sdist are both listed. Surface the release URL
 ### 10. Post-release housekeeping
 
 - `git status` on `main` is clean and on the merge commit that landed the release PR.
-- Delete the merged `release/X.Y.Z` branch (`git push origin --delete release/X.Y.Z`).
-- State the published version, the PyPI URL, and what the next milestone/release is
-  (from Current Status -> Next).
+- Confirm the **GitHub Release** the `github-release` job created (`gh release view
+  X.Y.Z`): its body carries the tracker summary + the PyPI link, with the wheel +
+  sdist attached. (The job runs `gh release create` from the workflow — never create
+  the release by hand.)
+- The merged `release/X.Y.Z` branch is auto-deleted by `gh pr merge --delete-branch`
+  (step 7); delete it manually only if the merge left it behind.
+- State the published version, the PyPI + GitHub Release URLs, and what the next
+  milestone/release is (from Current Status -> Next).
 
 ---
 

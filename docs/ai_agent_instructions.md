@@ -56,13 +56,21 @@ bumps — reaches `main` through a pull request:
    on `main` itself.
 2. Make the quality gates green, push the branch, and open a PR (`gh pr create`).
    CI runs on the PR and Copilot reviews it.
-3. The PR needs **one approving review** and **last-push approval**, then is **merged
-   with a merge commit** — squash and rebase are disabled
-   (`allowed_merge_methods: ["merge"]`).
+3. Once CI is green, **review the PR yourself with `/code-review`** and resolve every
+   finding — fix it on the branch, or, if it can't be fixed within this change's
+   scope, file it in `docs/progress_tracker.md` Open Non-Blocking Issues. Never merge
+   with an open, unaddressed finding.
+4. **Merge it yourself with a merge commit** — `gh pr merge --merge --admin` (squash
+   and rebase are disabled, `allowed_merge_methods: ["merge"]`; GitHub forbids
+   approving your own PR, so `--admin` satisfies the required-review / last-push check
+   and logs the bypass).
 
-Review and merge are a **human gate**: agents prepare the branch + PR and stop
-there. The `/tackle-issue` and `/release` commands encode this flow; releases tag
-the merged commit on `main` afterwards (see [README](../README.md) -> Releasing).
+The agent owns review + merge by default. **Defer to a human gate only when the agent
+cannot safely decide on its own** — the `1.0.0` stability sign-off, a
+security-sensitive or hard-to-reverse change beyond a routine publish, or anything
+the user has explicitly reserved; there, prepare the branch + PR and stop. The
+`/tackle-issue` and `/release` commands encode this flow; releases tag the merged
+commit on `main` afterwards (see [README](../README.md) -> Releasing).
 
 ## File map — where to find what
 

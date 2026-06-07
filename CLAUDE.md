@@ -36,10 +36,20 @@ Quick links:
 
 `main` is governed by the repository ruleset named **"main"**: **never commit or
 push directly to `main`** (no force-push, no deletion either). Branch off `main`
-(`feature/`, `fix/`, `docs/`, or `release/X.Y.Z`), push, and open a PR. A PR needs
-**one approving review** and **last-push approval**, then is **merged with a merge
-commit** (squash/rebase disabled). Review + merge are a human gate — prepare the
-branch and PR, then stop. Releases tag the merged commit on `main`. Full detail in
+(`feature/`, `fix/`, `docs/`, or `release/X.Y.Z`), push, and open a PR. Every change
+reaches `main` as a **merge commit** (squash/rebase disabled).
+
+**The agent gates and merges its own PRs.** After CI is green, **review the PR with
+`/code-review`**, resolve or file every finding (fix it on the branch, or record it
+in `docs/progress_tracker.md` Open Non-Blocking Issues), then merge it with a merge
+commit — `gh pr merge --merge --admin` (GitHub forbids self-approval, so `--admin`
+satisfies the ruleset's required-review check and logs the bypass). Releases tag the
+merged commit on `main`.
+
+**Defer to a human gate only when the agent cannot safely decide on its own** — e.g.
+the `1.0.0` stability sign-off, a security-sensitive or hard-to-reverse change beyond
+a routine publish, or anything the user has explicitly reserved. In those cases,
+prepare the branch + PR and stop. Full detail in
 [docs/ai_agent_instructions.md](docs/ai_agent_instructions.md) and the `/release`
 and `/tackle-issue` commands.
 

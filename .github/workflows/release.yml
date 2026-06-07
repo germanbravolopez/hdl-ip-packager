@@ -57,3 +57,35 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    name: Create GitHub Release
+    needs: publish # only announce a release that actually made it to PyPI
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the release and attach the built distributions
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download distributions
+        uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+
+      # Body = the tag's progress-tracker entry + a link to the PyPI page.
+      - name: Build release notes
+        run: python scripts/extract_release_notes.py > release-notes.md
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prerelease=""
+          case "${GITHUB_REF_NAME}" in
+            *-*) prerelease="--prerelease" ;;  # e.g. 1.2.0-rc.1
+          esac
+          gh release create "${GITHUB_REF_NAME}" dist/* \
+            --title "${GITHUB_REF_NAME}" \
+            --notes-file release-notes.md \
+            ${prerelease}

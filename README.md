@@ -192,14 +192,18 @@ pull request.
    ruff + mypy on each commit so these are caught locally before CI.
 4. **Push the branch and open a PR into `main`.** CI runs on the PR and Copilot
    reviews it automatically.
-5. **Get one approving review, then merge with a merge commit.** Squash and rebase
-   merges are disabled by the ruleset (`allowed_merge_methods: ["merge"]`). Because
-   last-push approval is required, any commit pushed after an approval needs a fresh
-   approval before the merge.
+5. **Review the PR, resolve findings, then merge with a merge commit.** Once CI is
+   green, the agent reviews the diff (`/code-review`), fixes or files every finding,
+   and merges with a merge commit (`gh pr merge --merge --admin`). Squash and rebase
+   merges are disabled by the ruleset (`allowed_merge_methods: ["merge"]`); GitHub
+   forbids approving your own PR, so `--admin` satisfies the required-review /
+   last-push check and logs the bypass.
 
-The PR approval and merge are a human gate; agents prepare the branch and PR and
-stop there. (The ruleset's enforcement can be toggled in repo settings, but the
-workflow above is the project's contract regardless.)
+The agent owns review + merge by default. A **human gate applies only when the agent
+cannot safely decide on its own** — the `1.0.0` stability sign-off, a
+security-sensitive or hard-to-reverse change, or anything explicitly reserved; there
+the agent prepares the branch + PR and stops. (The ruleset's enforcement can be
+toggled in repo settings, but the workflow above is the project's contract regardless.)
 
 ### Releasing
 
@@ -209,17 +213,21 @@ Releases are **tag-driven**, and the `X.Y.Z` tag must sit on the merge commit on
 1. On a `release/X.Y.Z` branch, bump the version in **both** `pyproject.toml` and
    `src/hdl_ip_packager/__init__.py`, record the release in
    `docs/progress_tracker.md`, and make the gates green.
-2. Open a PR into `main`, get it approved, and **merge with a merge commit**.
+2. Open a PR into `main`, **review it (`/code-review`) and merge with a merge commit**
+   (the agent owns this — see the workflow above; the `1.0.0` sign-off is the one
+   release that needs explicit human go-ahead).
 3. On the updated `main`, create and push the bare `X.Y.Z` tag (no `v` prefix).
-   `.github/workflows/release.yml` then builds the wheel + sdist and publishes to
-   PyPI via OIDC trusted publishing; a guard (`scripts/check_release_version.py`)
+   `.github/workflows/release.yml` then builds the wheel + sdist, publishes to PyPI
+   via OIDC trusted publishing, and **creates a GitHub Release** for the tag (a short
+   summary from the `docs/progress_tracker.md` entry plus a link to the PyPI page,
+   with the wheel + sdist attached). A guard (`scripts/check_release_version.py`)
    fails the run if the tag and the packaged version disagree, so the tag is the
    single source of truth for the published version.
 
 (One-time: register the repo as a PyPI trusted publisher and create the `pypi`
 environment.) The `/release` agent command in `.claude/commands/` automates the
-mechanics (bump both version files, run the gates, prepare the release PR, then —
-after the human-approved merge — tag `main` and watch Actions + PyPI to green).
+mechanics (bump both version files, run the gates, prepare the release PR, review +
+merge it, then tag `main` and watch Actions + PyPI to green).
 
 See [docs/ai_agent_instructions.md](./docs/ai_agent_instructions.md) for the full
 agent obligations and coding conventions.
