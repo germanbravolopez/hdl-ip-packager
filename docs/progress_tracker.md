@@ -152,6 +152,20 @@ _None._
 
 ## Completed Milestones
 
+### Hard gate: all PR checks must be green before merge — June 2026
+- [x] **Green CI is now an explicit, hard gate before any merge.** A real incident
+  drove this: PR #8 was merged while the `Test (py3.12, windows-latest)` check was
+  red — a transient `actions/setup-python` flake (the `Install`/`Test` steps were
+  *skipped*, not failed; `main`'s own push CI was green, so the code was fine). Two
+  process bugs allowed it: the merge step watched a **single** workflow run instead of
+  **all** PR checks, and piped `gh run watch` to `tail`, which **hid the non-zero exit
+  code** so `gh pr merge --admin` ran anyway (and `--admin` bypasses required checks).
+  Fix: the merge gate is now `gh pr checks <branch> --watch` (exit 0 over the whole
+  matrix, never piped to a pager), `--admin` is documented as covering **only** the
+  self-approval requirement (never a red/pending check), and a flaky run is re-run to
+  green (`gh run rerun <id> --failed`) rather than bypassed. Updated
+  `.claude/commands/release.md`, `CLAUDE.md`, `docs/ai_agent_instructions.md`.
+
 ### Branch model + agent-driven release flow + GitHub Release on tag — June 2026
 - [x] **Adopted a `develop` (working) + `main` (release line) branch model; PRs are
   release-only.** Day-to-day work now commits directly to `develop` with **no PR**
