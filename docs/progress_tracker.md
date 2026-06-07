@@ -18,9 +18,14 @@ them to Archive. Convert relative dates to absolute (e.g. "June 2026").
 
 **Active branch**: `main`
 
-**Version**: `0.7.0` — supply-chain: CycloneDX SBOM via `hdlpkg pack --sbom` (M8);
-see the Release plan. (Released as `0.7.0`, not `1.0.0`: the formats are still pre-1.0
-and the 1.0.0 stability gate is not yet met.)
+**Version**: `0.8.0` — the pre-1.0 completeness pass + backlog batch on top of the
+M8 SBOM work: reproducible lockfile-driven builds (`install --locked`/`gen
+--locked`), `hdlpkg add`, the `ip.toml` `schema` key, pack/top hardening, the `tree`
+Windows fix, `resolve`/`install`/`tree --registry`, `Fileset.depend`, three more
+backends (Icarus/GHDL/Yosys), and Dependabot. Shipped as `0.8.0`, not `1.0.0`: the
+formats are still moving (multi-version lockfile shape and a possible `scheme` key are
+recorded as open issues) and the 1.0.0 stability gate (rc soak, OCI protocol,
+third-party consume) is not yet met. See the Release plan.
 
 **Stage**: Feature-complete for the roadmap (M1–M8) plus the pre-1.0 completeness
 pass; fully typed, linted, and unit-tested (268 passing tests, ~96% coverage):
@@ -54,9 +59,11 @@ pass; fully typed, linted, and unit-tested (268 passing tests, ~96% coverage):
 - **Tooling** — pytest (markers + coverage gate + foldable summary), ruff, mypy
   strict on `src/`, CI workflow, and a cross-platform test-summary renderer.
 
-**Next**: all roadmap milestones (M1–M8) are delivered; the remaining work is the
-`1.0.0` stability gate (see the Release plan), plus the open backends/signing issues.
-(M8 SBOM generation is implemented on `main`, awaiting the `0.7.0` release.)
+**Next**: all roadmap milestones (M1–M8) are delivered; the remaining work toward
+`1.0.0` is the stability gate (see the Release plan) — frozen formats, an `rc` soak,
+the OCI protocol, and a third-party publish/consume — plus the open
+backends/signing and the newly recorded versioning issues (multi-version
+coexistence, unification semantics, non-SemVer schemes).
 
 ---
 
@@ -144,6 +151,21 @@ _None._
 ---
 
 ## Completed Milestones
+
+### Release 0.8.0 — June 2026
+- [x] **Tagged `0.8.0`** per the Release plan: ships the pre-1.0 completeness pass +
+  the non-blocking/backlog batch that landed on `main` after the `0.7.0` tag —
+  reproducible lockfile-driven builds (`install --locked`/`gen --locked`), `hdlpkg
+  add`, the optional `ip.toml` `schema` key, pack-path + tool-flow `top` hardening,
+  the `hdlpkg tree` Windows (cp1252) fix, `resolve`/`install`/`tree --registry`
+  consuming a published `LocalRegistry`, `Fileset.depend`-aware EDAM assembly, three
+  more tool-flow backends (Icarus/GHDL/Yosys), Dependabot, and the per-module user
+  manual. Shipped as `0.8.0` rather than `1.0.0`: the `ip.toml`/`ip.lock` formats are
+  still moving (multi-version coexistence, unification semantics, and non-SemVer
+  version schemes are now recorded as Open Non-Blocking Issues) and the 1.0.0
+  stability gate (an `rc` soak, the OCI registry protocol, a third-party
+  publish/consume) is not yet met. Bumped `pyproject.toml` + `__init__.py`. Also
+  recorded the three versioning issues above.
 
 ### Pre-1.0 completeness pass — June 2026
 - [x] **Reproducible, lockfile-driven builds** (`install --locked`, `gen --locked`).
