@@ -18,6 +18,7 @@ from pathlib import Path
 from . import __version__
 from .backends import CoreSource, build_eda_design, get_backend
 from .cache import ContentAddressedCache, default_cache_root
+from .editing import add_dependency
 from .exceptions import BackendError, HdlPackagerError, ManifestError
 from .ipxact import to_ipxact
 from .lockfile import LOCKFILE_FILENAME, Lockfile, sha256_digest
@@ -29,13 +30,8 @@ from .resolver import resolve as resolve_deps
 from .sbom import build_cyclonedx
 from .scaffold import DEFAULT_VERSION, ScaffoldOptions, render_manifest
 from .treeview import render_dependency_tree
-from .vlnv import Vlnv
-
-# Commands that have a real implementation today. Everything else is a planned
-# stub (see docs/progress_tracker.md) and reports as much instead of pretending.
-_PLANNED = {
-    "add": "add a dependency to ip.toml",
-}
+from .version import VersionConstraint
+from .vlnv import PackageRef, Vlnv
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -206,9 +202,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_ipxact.set_defaults(func=_cmd_export_ipxact)
 
-    for name, help_text in _PLANNED.items():
-        p = sub.add_parser(name, help=f"[planned] {help_text}")
-        p.set_defaults(func=_cmd_planned, command_name=name)
+    p_add = sub.add_parser("add", help="add or update a dependency in ip.toml")
+    p_add.add_argument(
+        "dependency",
+        help="vendor:library:name[@constraint] (e.g. acme:common:fifo@^1.0.0)",
+    )
+    p_add.add_argument("path", nargs="?", default=MANIFEST_FILENAME, help="path to the manifest")
+    p_add.add_argument(
+        "--version",
+        metavar="CONSTRAINT",
+        help="version constraint (overrides any @constraint; default: *)",
+    )
+    p_add.set_defaults(func=_cmd_add)
 
     return parser
 
@@ -443,14 +448,25 @@ def _cmd_export_ipxact(args: argparse.Namespace) -> int:
     return 0
 
 
-def _cmd_planned(args: argparse.Namespace) -> int:
-    name = args.command_name
-    print(
-        f"'hdlpkg {name}' is planned but not implemented yet: {_PLANNED[name]}.\n"
-        f"See docs/progress_tracker.md for the roadmap.",
-        file=sys.stderr,
-    )
-    return 2
+def _cmd_add(args: argparse.Namespace) -> int:
+    ref_str, at, inline = args.dependency.partition("@")
+    constraint_str = args.version or (inline if at else "*")
+    try:
+        ref = PackageRef.parse(ref_str.strip())
+        constraint = VersionConstraint.parse(constraint_str.strip())
+    except HdlPackagerError as exc:
+        raise ManifestError(f"Invalid dependency '{args.dependency}': {exc}") from exc
+
+    manifest_path = Path(args.path)
+    manifest = Manifest.from_path(manifest_path)  # validates and confirms it exists
+    if ref == manifest.ref:
+        raise ManifestError(f"A core cannot depend on itself ({ref}).")
+
+    updated = add_dependency(manifest_path.read_text(encoding="utf-8"), ref, constraint)
+    Manifest.from_str(updated)  # re-validate the edited manifest before writing
+    manifest_path.write_text(updated, encoding="utf-8")
+    print(f"Added {ref} = {constraint} to {manifest_path}")
+    return 0
 
 
 def main(argv: Sequence[str] | None = None) -> int:

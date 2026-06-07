@@ -100,7 +100,7 @@ quick-find reference.
 | `hdlpkg info [path]` | implemented | Print parsed identity, deps, filesets, targets |
 | `hdlpkg validate [path]` | implemented | Parse + validate a manifest (exit 0 if OK) |
 | `hdlpkg init [dir]` | implemented | Scaffold a starter `ip.toml` (flags or interactive prompts) |
-| `hdlpkg add <vlnv>` | planned | Add a dependency to `ip.toml` |
+| `hdlpkg add <dep> [path] [--version]` | implemented | Add/update a dependency in `ip.toml` (text-preserving) |
 | `hdlpkg resolve [path] [--search DIR] [--output]` | implemented | Resolve deps against a local registry, write `ip.lock` |
 | `hdlpkg install [path] [--search] [--cache-dir]` | implemented | Resolve + fetch into the content-addressed cache (verified) |
 | `hdlpkg pack [path] [--output] [--sbom] [--search]` | implemented | Build a deterministic `.ipkg`; `--sbom` also writes a CycloneDX SBOM |

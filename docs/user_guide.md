@@ -128,7 +128,11 @@ This writes a valid starter `ip.toml` (one `rtl` fileset, one `sim` target) that
 passes `validate` immediately. Then:
 
 1. Add your sources under `rtl/` and list them in `[filesets.rtl]`.
-2. Declare dependencies under `[dependencies]` with version constraints:
+2. Declare dependencies under `[dependencies]` with version constraints — by hand,
+   or with `hdlpkg add` (which preserves your formatting and re-validates):
+   ```bash
+   hdlpkg add mycorp:common:fifo@^1.0.0
+   ```
    ```toml
    [dependencies]
    "mycorp:common:fifo" = "^1.0.0"

@@ -11,7 +11,7 @@ delegates to the library, so every behavior stays unit-testable. Run it as the
 - **Invocation**: `hdlpkg <command> [args]`. `hdlpkg --version` prints `hdlpkg X.Y.Z`;
   `hdlpkg --help` (or no command) prints usage.
 - **Exit codes**: `0` success; `1` a packager error (printed as `error: <message>` to
-  stderr); `2` a planned-but-unimplemented command.
+  stderr).
 - `[path]` defaults to `./ip.toml`. `--search` is repeatable; when omitted it defaults
   to the manifest's parent directory.
 
@@ -24,6 +24,14 @@ of a manifest.
 ### `validate [path]`
 Parse and fully validate a manifest; print `OK: <vlnv> is a valid manifest.` (exit 0)
 or the validation error (exit 1).
+
+### `add <dependency> [path] [--version CONSTRAINT]`
+Add or update a dependency in `ip.toml`. `<dependency>` is
+`vendor:library:name[@constraint]` (e.g. `acme:common:fifo@^1.0.0`); the constraint
+may also be given with `--version` (which overrides any `@constraint`), and defaults
+to `*` if neither is supplied. The edit is text-preserving (your formatting and
+comments are kept), it refuses a self-dependency, and the result is re-validated
+before it is written.
 
 ### `init [dir]`
 Scaffold a starter `ip.toml` (one `rtl` fileset, one `sim` target) via
@@ -89,11 +97,6 @@ target's `toolflow` (`verilator`, `vivado`, `icarus`, `ghdl`, `yosys`).
 ### `export-ipxact [path] [--output FILE]`
 Write an [IP-XACT](ipxact.md) (IEEE 1685-2014) component XML (default
 `<vendor>.<library>.<name>.<version>.xml`).
-
-## Planned
-
-### `add <vlnv>` *(planned)*
-Add a dependency to `ip.toml`. Currently reports "not implemented yet" and exits `2`.
 
 ## Example session
 
