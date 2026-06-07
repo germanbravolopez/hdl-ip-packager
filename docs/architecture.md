@@ -4,7 +4,7 @@
 
 This document is the technical reference for how the packager is built and how it
 is meant to grow. Sections marked **(implemented)** exist and are tested today;
-**(planned)** sections are designed but stubbed — see
+**(planned)** sections are designed but not yet built (tracked as open issues) — see
 [progress_tracker.md](./progress_tracker.md) for status.
 
 ---
@@ -17,25 +17,28 @@ the **manifest → resolve → lock → fetch → generate** pipeline that lets 
 reuse versioned IP the way software reuses packages.
 
 ```
-            author writes                resolver picks            backends consume
-          ┌───────────────┐   reads    ┌───────────────┐  writes  ┌───────────────┐
-  ip.toml │   Manifest    │──────────▶ │   Resolution  │────────▶ │  ip.lock      │
- (manifest)│  (identity,  │            │ (1 Vlnv per   │          │ (exact vlnvs  │
-          │   deps, fset) │            │   package)    │          │  + checksums) │
-          └───────────────┘            └───────┬───────┘          └───────────────┘
-                                               │ fetch (verified)
-                                               ▼
-                                     ┌───────────────────┐  generate  ┌──────────────┐
-                                     │  Cache / Registry │──────────▶ │ EDAM / tool  │
-                                     │ (content-addressed)│           │ files, IP-XACT│
-                                     └───────────────────┘            └──────────────┘
+            author writes                 resolver picks              backends consume
+           ┌───────────────┐   reads     ┌───────────────┐  writes   ┌───────────────┐
+  ip.toml  │   Manifest    │───────────> │  Resolution   │─────────> │  ip.lock      │
+ (manifest)│  (identity,   │             │ (1 Vlnv per   │           │ (exact vlnvs  │
+           │   deps, fset) │             │   package)    │           │  + checksums) │
+           └───────────────┘             └───────┬───────┘           └───────────────┘
+                                                 │ fetch (verified)
+                                                 ▼
+                                      ┌────────────────────┐  generate  ┌───────────────┐
+                                      │  Cache / Registry  │──────────> │ EDAM / tool   │
+                                      │ (content-addressed)│            │ files, IP-XACT│
+                                      └────────────────────┘            └───────────────┘
 ```
 
 ---
 
 ## 2. Module map
 
-All source lives under [src/hdl_ip_packager/](../src/hdl_ip_packager/).
+All source lives under [src/hdl_ip_packager/](../src/hdl_ip_packager/). This page is
+the *design* view (how modules fit and why); for the per-module **reference** (public
+API, behavior, errors, examples) see the [module manual](modules/README.md), and for a
+task-oriented intro see the [user guide](user_guide.md).
 
 | Module | File | Status | Responsibility |
 |--------|------|--------|----------------|
@@ -44,13 +47,13 @@ All source lives under [src/hdl_ip_packager/](../src/hdl_ip_packager/).
 | Manifest | [manifest.py](../src/hdl_ip_packager/manifest.py) | implemented | Parse/validate `ip.toml` → `Manifest` (identity, deps, filesets, targets) |
 | Scaffolder | [scaffold.py](../src/hdl_ip_packager/scaffold.py) | implemented | Pure renderer for a starter `ip.toml` (behind `hdlpkg init`) |
 | Errors | [exceptions.py](../src/hdl_ip_packager/exceptions.py) | implemented | One exception hierarchy rooted at `HdlPackagerError` |
-| CLI | [cli.py](../src/hdl_ip_packager/cli.py) | implemented | `hdlpkg` entry point; `info`/`validate`/`init` work, rest are wired stubs |
+| CLI | [cli.py](../src/hdl_ip_packager/cli.py) | implemented | `hdlpkg` entry point; all commands implemented (`info`/`validate`/`init`/`add`/`resolve`/`install`/`pack`/`publish`/`pull`/`yank`/`gen`/`tree`/`export-ipxact`) |
 | Resolver | [resolver.py](../src/hdl_ip_packager/resolver.py) | implemented | Constraints → one concrete `Vlnv` per package (backtracking, newest-compatible) |
 | Lockfile | [lockfile.py](../src/hdl_ip_packager/lockfile.py) | implemented | Serialize/parse/verify `ip.lock` (a `Resolution` + per-core source + SHA-256) |
 | Cache | [cache.py](../src/hdl_ip_packager/cache.py) | implemented | Content-addressed local blob store (SHA-256 key, verify-on-read, atomic writes) |
-| Registry | [registry.py](../src/hdl_ip_packager/registry.py) | implemented (local + HTTP) | Abstract `Registry` + local-dir/HTTP/writable-local backends + graph walker (Git/OCI tracked as issues) |
+| Registry | [registry.py](../src/hdl_ip_packager/registry.py) | implemented (local + HTTP + writable) | Abstract `Registry` + local-dir/HTTP/writable-local backends + graph walker (Git/OCI tracked as issues) |
 | Packaging | [packaging.py](../src/hdl_ip_packager/packaging.py) | implemented | Build/read the deterministic `.ipkg` artifact (`pack_core`, `extract_ipkg`) |
-| Backends | [backends/](../src/hdl_ip_packager/backends/) | implemented (Verilator + Vivado) | EDAM-like intermediate (`build_eda_design`) → tool inputs behind `hdlpkg gen` |
+| Backends | [backends/](../src/hdl_ip_packager/backends/) | implemented (Verilator, Vivado, Icarus, GHDL, Yosys) | EDAM-like intermediate (`build_eda_design`) → tool inputs behind `hdlpkg gen` |
 | Tree view | [treeview.py](../src/hdl_ip_packager/treeview.py) | implemented | `render_dependency_tree` → ASCII dependency graph behind `hdlpkg tree` |
 | IP-XACT | [ipxact.py](../src/hdl_ip_packager/ipxact.py) | implemented | `to_ipxact` → IEEE 1685-2014 component XML behind `hdlpkg export-ipxact` |
 | SBOM | [sbom.py](../src/hdl_ip_packager/sbom.py) | implemented (CycloneDX) | `build_cyclonedx` → deterministic CycloneDX 1.5 SBOM behind `hdlpkg pack --sbom` |
@@ -60,7 +63,7 @@ The dependency direction is strictly one-way and acyclic:
 ```
 exceptions  ← version ← vlnv ← manifest ← {resolver, cli}
                           ↑        ↑
-                       scaffold    registry (planned)
+                     scaffold    registry
 ```
 
 `scaffold` is pure too (it renders a manifest string from `version`/`vlnv` and is
@@ -115,13 +118,12 @@ reproducible, verifiable builds (the Cargo/Orbit/Go model). Serialized as TOML
 with a schema `version` and a `[[package]]` array sorted by VLNV (stable, diff
 -friendly); `Lockfile.from_toml` round-trips it and `verify()` fails closed on a
 missing/mismatched checksum. The module is pure — the CLI's `resolve` command does
-the directory scan and digesting. The recorded checksum currently covers the
-manifest bytes; M3 widens it to the full packaged content without changing the
-file format.
+the directory scan and digesting. The recorded checksum is the **packed-content
+digest** of the core (the same SHA-256 the cache keys on and the registry serves).
 
 ---
 
-## 4. Subsystems to be built (design intent)
+## 4. Subsystem designs
 
 ### Resolver *(implemented — [resolver.py](../src/hdl_ip_packager/resolver.py))*
 Input: the root `Manifest` + `available: Mapping[PackageRef, Sequence[Manifest]]`
@@ -146,14 +148,14 @@ own bytes (sharded git-style as `<root>/sha256/ab/cdef...`). It is **verify-on
 with the requested key, so a corrupted/tampered blob fails closed. Writes are
 atomic (temp file + `os.replace`) and idempotent (content-addressing dedupes).
 `default_cache_root()` is a user-level dir (`~/.hdlpkg/cache`) for cross-project
-offline reuse. The registry backends (M4) fetch into this store; what a blob
-contains is defined by packaging (M5).
+offline reuse. The registry backends fetch into this store; a blob is a core's
+packed `.ipkg` (see Packaging below).
 
 ### Registry *(implemented: local + HTTP — [registry.py](../src/hdl_ip_packager/registry.py))*
 `Registry` is an ABC with `versions()`, `manifest()`, `artifact_bytes()`, and a
 shared `fetch()` that stores a core's artifact in the content-addressed cache
 (verified). `available_from_registry()` walks the dependency graph to build the
-`Mapping[PackageRef, Sequence[Manifest]]` the resolver consumes. Two backends ship:
+`Mapping[PackageRef, Sequence[Manifest]]` the resolver consumes. Two read backends ship:
 - **`LocalDirectoryRegistry`** — cores discovered by scanning directory trees for
   `ip.toml` (the `examples/` layout); backs `hdlpkg resolve`/`install`.
 - **`HttpRegistry`** — cores served by a static HTTP index
@@ -162,9 +164,12 @@ shared `fetch()` that stores a core's artifact in the content-addressed cache
 Still designed but **tracked as open issues** (they need external tooling / live
 services to build and test): a **Git-backed channel** and — the differentiator —
 an **OCI artifact** registry (reuse Docker-registry infra: content-addressable,
-immutable, ubiquitous). Publishing (append-only with **yank**) lands with M5.
-A core's "artifact" is its manifest bytes until packaging (M5) defines the packed
-form; the interface does not change when it does.
+immutable, ubiquitous).
+
+A writable **`LocalRegistry`** adds publishing (append-only, with **yank** to retire
+a version without breaking existing lockfiles); it backs `hdlpkg publish`/`pull`/
+`yank`. A core's "artifact" is its packed `.ipkg` bytes
+(see Packaging below); the interface is unchanged by that.
 
 ### Packaging *(implemented — [packaging.py](../src/hdl_ip_packager/packaging.py))*
 `pack_core` builds a **deterministic** `.ipkg` (a gzip+tar of `ip.toml` plus every
@@ -183,10 +188,13 @@ root core, its resolved dependencies, and a chosen target, then hands it to the
 `Backend` selected by the target's `toolflow`. The root contributes its target's
 filesets (testbench included for `sim`, excluded for `synth`); each dependency
 contributes only its synthesizable surface (its `rtl` fileset, or all non-testbench
-filesets), emitted dependencies-first via a topological sort. Two backends ship:
-`VerilatorBackend` (a `.vc` command file) and `VivadoBackend` (a `.tcl` source
-script); both are pure (`generate` returns `{filename: text}`), so the CLI does the
-file writing. Tool specifics stay out of the manifest/resolver/packaging layers.
+filesets), emitted dependencies-first via a topological sort. Any selected fileset
+also pulls in its declared `depend` filesets (transitively, before it), so a core
+can state exactly what a fileset needs. Five backends ship: `VerilatorBackend`
+(`.vc`), `VivadoBackend` (`.tcl`), `IcarusBackend` (`.cmd` + `run_iverilog.sh`),
+`GhdlBackend` (`run_ghdl.sh`, VHDL-only), and `YosysBackend` (`.ys`); all are pure
+(`generate` returns `{filename: text}`), so the CLI does the file writing. Tool
+specifics stay out of the manifest/resolver/packaging layers.
 ### IP-XACT export *(implemented — [ipxact.py](../src/hdl_ip_packager/ipxact.py))*
 `export-ipxact` renders a manifest as an IEEE **1685-2014** component XML via the
 pure `to_ipxact`: VLNV identity, a `model` of one view + componentInstantiation per
@@ -219,15 +227,14 @@ cli.main(["info", path])
 ```
 
 Every step raises a subclass of `HdlPackagerError`; `cli.main` catches it and
-returns exit code 1 with a single `error: …` line. Planned commands return exit
-code 2 with a "not implemented" notice rather than pretending to work.
+returns exit code 1 with a single `error: …` line.
 
 ---
 
 ## 6. Conventions that keep this scalable
 
 - **Pure core, I/O at the edges.** Parsing/logic modules take and return values;
-  filesystem/network lives in the CLI and (future) registry layer. This is why
+  filesystem/network lives in the CLI and registry/cache layer. This is why
   the test suite is fast and deterministic.
 - **One exception family.** Everything derives from `HdlPackagerError`.
 - **Typed and linted.** `mypy --strict` on `src/`, `ruff` on everything.

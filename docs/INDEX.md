@@ -9,7 +9,9 @@ quick-find reference.
 
 | File | What's in it |
 |------|-------------|
-| `docs/ai_agent_instructions.md` | **Start here** — briefing, file map, coding + testability rules, obligations |
+| `docs/user_guide.md` | **New users start here** — what the tool does + a hands-on walkthrough |
+| `docs/modules/` | The user manual: one reference page per module + the CLI (`modules/README.md` indexes it) |
+| `docs/ai_agent_instructions.md` | **Agents start here** — briefing, file map, coding + testability rules, obligations |
 | `docs/architecture.md` | Module map, data model, subsystem designs, data flow |
 | `docs/progress_tracker.md` | Status, ordered roadmap, open issues, milestones |
 | `docs/research/state_of_the_art.md` | Survey of package managers + HDL tools; design rationale + sources |
@@ -36,7 +38,7 @@ quick-find reference.
 | Content-addressed cache | `src/hdl_ip_packager/cache.py` | implemented |
 | Registry (local + HTTP + writable) | `src/hdl_ip_packager/registry.py` | implemented |
 | Packaging (`.ipkg`) | `src/hdl_ip_packager/packaging.py` | implemented |
-| Tool-flow backends (`gen`) | `src/hdl_ip_packager/backends/` | implemented (Verilator + Vivado) |
+| Tool-flow backends (`gen`) | `src/hdl_ip_packager/backends/` | implemented (Verilator, Vivado, Icarus, GHDL, Yosys) |
 | Dependency tree view (`tree`) | `src/hdl_ip_packager/treeview.py` | implemented |
 | IP-XACT export (`export-ipxact`) | `src/hdl_ip_packager/ipxact.py` | implemented (1685-2014) |
 | SBOM (`pack --sbom`) | `src/hdl_ip_packager/sbom.py` | implemented (CycloneDX 1.5) |
@@ -53,6 +55,7 @@ quick-find reference.
 | `.pre-commit-config.yaml` | Local git hooks mirroring CI (ruff lint + format, mypy on `src/`) + hygiene hooks |
 | `mkdocs.yml` | MkDocs Material config for the docs site (nav over `docs/`, theme, validation) |
 | `.github/workflows/docs.yml` | Builds the MkDocs site and publishes it to GitHub Pages on push to `main` |
+| `.github/dependabot.yml` | Weekly grouped dependency-update PRs for pip + GitHub Actions |
 | `.gitignore` / `.gitattributes` | Ignore rules (incl. `.hdlpkg/` cache) + line-ending normalization |
 | `.claude/commands/` | Slash-command skills (`/coding-guidelines`, `/update-docs`, `/tackle-issue`, `/release`) |
 | `examples/` | Bundled example IP cores (`fifo`, `uart`) with real `ip.toml` manifests + HDL |
@@ -97,17 +100,16 @@ quick-find reference.
 | `hdlpkg info [path]` | implemented | Print parsed identity, deps, filesets, targets |
 | `hdlpkg validate [path]` | implemented | Parse + validate a manifest (exit 0 if OK) |
 | `hdlpkg init [dir]` | implemented | Scaffold a starter `ip.toml` (flags or interactive prompts) |
-| `hdlpkg add <vlnv>` | planned | Add a dependency to `ip.toml` |
-| `hdlpkg resolve [path] [--search DIR] [--output]` | implemented | Resolve deps against a local registry, write `ip.lock` |
-| `hdlpkg install [path] [--search] [--cache-dir]` | implemented | Resolve + fetch into the content-addressed cache (verified) |
+| `hdlpkg add <dep> [path] [--version]` | implemented | Add/update a dependency in `ip.toml` (text-preserving) |
+| `hdlpkg resolve [path] [--search DIR] [--registry DIR] [--output]` | implemented | Resolve deps (source scan or a published `--registry`), write `ip.lock` |
+| `hdlpkg install [path] [--search] [--registry DIR] [--cache-dir] [--locked]` | implemented | Resolve + fetch into the verified cache (source scan or a published `--registry`); `--locked` installs exactly from `ip.lock` |
 | `hdlpkg pack [path] [--output] [--sbom] [--search]` | implemented | Build a deterministic `.ipkg`; `--sbom` also writes a CycloneDX SBOM |
 | `hdlpkg publish [path] --registry DIR` | implemented | Publish a core to a local registry (append-only) |
 | `hdlpkg pull <vlnv> --registry DIR [--output]` | implemented | Fetch a core by VLNV into the cache; optionally extract |
 | `hdlpkg yank <vlnv> --registry DIR` | implemented | Hide a published version from new resolves |
-| `hdlpkg gen <target> [--search DIR] [--output DIR]` | implemented | Generate tool-flow inputs (Verilator `.vc` / Vivado `.tcl`) for a target |
-| `hdlpkg tree [--search DIR]` | implemented | Print the resolved dependency graph as a tree |
+| `hdlpkg gen <target> [--search DIR] [--output DIR] [--locked]` | implemented | Generate tool-flow inputs (Verilator/Vivado/Icarus/GHDL/Yosys); `--locked` pins deps from `ip.lock` |
+| `hdlpkg tree [--search DIR] [--registry DIR]` | implemented | Print the resolved dependency graph as a tree |
 | `hdlpkg export-ipxact [--output FILE]` | implemented | Export an IP-XACT (IEEE 1685-2014) component XML |
-| `hdlpkg export-ipxact` | planned | Export IP-XACT (IEEE 1685) for tool interop |
 
 ## Glossary
 
@@ -133,6 +135,9 @@ quick-find reference.
 
 | Topic | Where |
 |-------|-------|
+| Getting started / what the tool does | `docs/user_guide.md` |
+| How a specific module behaves (reference) | `docs/modules/<module>.md` (indexed by `docs/modules/README.md`) |
+| Every CLI command + flag | `docs/modules/cli.md` |
 | Why these design choices | `docs/research/state_of_the_art.md` |
 | How a manifest is parsed | `src/hdl_ip_packager/manifest.py` + `docs/architecture.md` §3 |
 | Constraint syntax (`^`, `~`, ranges) | `src/hdl_ip_packager/version.py` + `docs/architecture.md` §3 |
