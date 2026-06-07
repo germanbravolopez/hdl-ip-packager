@@ -34,22 +34,23 @@ Quick links:
 
 ## Branch & merge workflow
 
-`main` is governed by the repository ruleset named **"main"**: **never commit or
-push directly to `main`** (no force-push, no deletion either). Branch off `main`
-(`feature/`, `fix/`, `docs/`, or `release/X.Y.Z`), push, and open a PR. Every change
-reaches `main` as a **merge commit** (squash/rebase disabled).
+Day-to-day work lands on **`develop`**, the working branch. Commit directly to
+`develop` (or a short-lived `feature/`/`fix/`/`docs/` branch you merge into it);
+**no PR is required for normal work** — `/tackle-issue` just makes the gates green
+and commits. Push `develop`; CI runs on the push.
 
-**The agent gates and merges its own PRs.** After CI is green, **review the PR with
-`/code-review`**, resolve or file every finding (fix it on the branch, or record it
-in `docs/progress_tracker.md` Open Non-Blocking Issues), then merge it with a merge
-commit — `gh pr merge --merge --admin` (GitHub forbids self-approval, so `--admin`
-satisfies the ruleset's required-review check and logs the bypass). Releases tag the
-merged commit on `main`.
+`main` is the protected **release line** (ruleset "main": no direct commits/pushes,
+no force-push, no deletion, merge-commit-only). It is updated **only at release
+time** — a release is the one flow that uses a PR: cut `release/X.Y.Z` off `develop`,
+bump the version, open a PR into `main`, and once CI is green the agent **reviews it
+with `/code-review`**, resolves or files every finding, and **merges it** with a merge
+commit (`gh pr merge --merge --admin`; GitHub forbids self-approval, so `--admin`
+satisfies the ruleset and logs the bypass). Then tag the merged commit on `main` to
+publish, and fast-forward `develop` to `main`.
 
-**Defer to a human gate only when the agent cannot safely decide on its own** — e.g.
-the `1.0.0` stability sign-off, a security-sensitive or hard-to-reverse change beyond
-a routine publish, or anything the user has explicitly reserved. In those cases,
-prepare the branch + PR and stop. Full detail in
+A **human gate applies only when the agent cannot safely decide on its own** — the
+`1.0.0` stability sign-off, a security-sensitive or hard-to-reverse change, or
+anything the user reserved. Full detail in
 [docs/ai_agent_instructions.md](docs/ai_agent_instructions.md) and the `/release`
 and `/tackle-issue` commands.
 
