@@ -22,7 +22,12 @@ from .editing import add_dependency
 from .exceptions import BackendError, HdlPackagerError, LockfileError, ManifestError
 from .ipxact import to_ipxact
 from .lockfile import LOCKFILE_FILENAME, Lockfile, sha256_digest
-from .manifest import MANIFEST_FILENAME, Manifest
+from .manifest import (
+    MANIFEST_FILENAME,
+    SUPPORTED_CONFLICT_POLICIES,
+    ConflictPolicy,
+    Manifest,
+)
 from .packaging import artifact_filename, extract_ipkg, pack_core
 from .registry import (
     LocalDirectoryRegistry,
@@ -107,6 +112,7 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="DIR",
         help="resolve from a published registry directory (overrides --search)",
     )
+    _add_conflict_arg(p_resolve)
     p_resolve.set_defaults(func=_cmd_resolve)
 
     p_install = sub.add_parser(
@@ -141,6 +147,7 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="DIR",
         help="fetch from a published registry directory (overrides --search)",
     )
+    _add_conflict_arg(p_install)
     p_install.set_defaults(func=_cmd_install)
 
     p_pack = sub.add_parser("pack", help="package this core into a distributable .ipkg")
@@ -203,6 +210,7 @@ def build_parser() -> argparse.ArgumentParser:
         help=f"use the dependency versions pinned in {LOCKFILE_FILENAME} instead of "
         "re-resolving (reproducible generation); fail if it is missing",
     )
+    _add_conflict_arg(p_gen)
     p_gen.set_defaults(func=_cmd_gen)
 
     p_tree = sub.add_parser("tree", help="print the resolved dependency graph")
@@ -221,6 +229,7 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="DIR",
         help="resolve from a published registry directory (overrides --search)",
     )
+    _add_conflict_arg(p_tree)
     p_tree.set_defaults(func=_cmd_tree)
 
     p_ipxact = sub.add_parser(
@@ -248,6 +257,30 @@ def build_parser() -> argparse.ArgumentParser:
     p_add.set_defaults(func=_cmd_add)
 
     return parser
+
+
+def _add_conflict_arg(parser: argparse.ArgumentParser) -> None:
+    """Add the ``--on-conflict`` policy override (overrides the manifest's setting)."""
+    parser.add_argument(
+        "--on-conflict",
+        choices=SUPPORTED_CONFLICT_POLICIES,
+        default=None,
+        dest="on_conflict",
+        help="how to handle an incompatible version conflict, overriding the "
+        "manifest's [resolution] on-conflict (default: the manifest's value, or "
+        "fail_on_conflict)",
+    )
+
+
+def _policy(args: argparse.Namespace) -> ConflictPolicy | None:
+    """The CLI conflict-policy override, if any (else None -> use the manifest's)."""
+    return getattr(args, "on_conflict", None)
+
+
+def _print_warnings(resolution: Resolution) -> None:
+    """Surface any policy-driven compromises the resolve made."""
+    for warning in resolution.warnings:
+        print(f"warning: {warning}", file=sys.stderr)
 
 
 def _load(path: str) -> Manifest:
@@ -318,12 +351,14 @@ def _cmd_init(args: argparse.Namespace) -> int:
 
 
 def _resolve_local(
-    manifest_path: Path, search: list[str] | None
+    manifest_path: Path,
+    search: list[str] | None,
+    policy: ConflictPolicy | None = None,
 ) -> tuple[Resolution, LocalDirectoryRegistry]:
     """Resolve *manifest_path* against a local-directory registry over *search*."""
     root = Manifest.from_path(manifest_path)
     registry = _local_registry(manifest_path, search)
-    resolution = resolve_deps(root, available_from_registry(registry, root))
+    resolution = resolve_deps(root, available_from_registry(registry, root), policy)
     return resolution, registry
 
 
@@ -352,7 +387,7 @@ def _resolve(manifest_path: Path, args: argparse.Namespace) -> tuple[Resolution,
     """Resolve *manifest_path* against the selected registry (published or local-scan)."""
     root = Manifest.from_path(manifest_path)
     registry = _reader_registry(manifest_path, args)
-    resolution = resolve_deps(root, available_from_registry(registry, root))
+    resolution = resolve_deps(root, available_from_registry(registry, root), _policy(args))
     return resolution, registry
 
 
@@ -374,6 +409,7 @@ def _cmd_resolve(args: argparse.Namespace) -> int:
     output = Path(args.output) if args.output else manifest_path.parent / LOCKFILE_FILENAME
     output.write_text(lock.to_toml(), encoding="utf-8")
 
+    _print_warnings(resolution)
     print(f"Resolved {len(resolution.vlnvs)} package(s); wrote {output}")
     for vlnv in resolution.vlnvs:
         print(f"  {vlnv}")
@@ -408,6 +444,7 @@ def _cmd_install(args: argparse.Namespace) -> int:
     output = Path(args.output) if args.output else manifest_path.parent / LOCKFILE_FILENAME
     output.write_text(lock.to_toml(), encoding="utf-8")
 
+    _print_warnings(resolution)
     print(f"Installed {len(fetched)} package(s) into {cache_root}; wrote {output}")
     for vlnv in resolution.vlnvs:
         print(f"  {vlnv}")
@@ -481,7 +518,8 @@ def _cmd_gen(args: argparse.Namespace) -> int:
         registry = _local_registry(manifest_path, args.search)
         dep_vlnvs = [pkg.vlnv for pkg in lock.packages]
     else:
-        resolution, registry = _resolve_local(manifest_path, args.search)
+        resolution, registry = _resolve_local(manifest_path, args.search, _policy(args))
+        _print_warnings(resolution)
         dep_vlnvs = list(resolution.vlnvs)
     dependencies = [
         CoreSource(manifest=registry.manifest(vlnv), root=str(registry.core_dir(vlnv)))
@@ -515,8 +553,9 @@ def _cmd_tree(args: argparse.Namespace) -> int:
     manifest_path = Path(args.path)
     root = Manifest.from_path(manifest_path)
     resolution, registry = _resolve(manifest_path, args)
-    manifests = {vlnv.ref: registry.manifest(vlnv) for vlnv in resolution.vlnvs}
-    print(render_dependency_tree(root, resolution.selected, manifests))
+    manifests = {vlnv: registry.manifest(vlnv) for vlnv in resolution.vlnvs}
+    _print_warnings(resolution)
+    print(render_dependency_tree(root, resolution.by_ref, manifests))
     return 0
 
 

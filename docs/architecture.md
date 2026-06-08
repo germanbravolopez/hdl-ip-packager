@@ -48,7 +48,7 @@ task-oriented intro see the [user guide](user_guide.md).
 | Scaffolder | [scaffold.py](../src/hdl_ip_packager/scaffold.py) | implemented | Pure renderer for a starter `ip.toml` (behind `hdlpkg init`) |
 | Errors | [exceptions.py](../src/hdl_ip_packager/exceptions.py) | implemented | One exception hierarchy rooted at `HdlPackagerError` |
 | CLI | [cli.py](../src/hdl_ip_packager/cli.py) | implemented | `hdlpkg` entry point; all commands implemented (`info`/`validate`/`init`/`add`/`resolve`/`install`/`pack`/`publish`/`pull`/`yank`/`gen`/`tree`/`export-ipxact`) |
-| Resolver | [resolver.py](../src/hdl_ip_packager/resolver.py) | implemented | Constraints → one concrete `Vlnv` per package (backtracking, newest-compatible) |
+| Resolver | [resolver.py](../src/hdl_ip_packager/resolver.py) | implemented | Constraints → selected `Vlnv`(s) (backtracking, Cargo-style unification, `[resolution] on-conflict` policy, scheme-aware) |
 | Lockfile | [lockfile.py](../src/hdl_ip_packager/lockfile.py) | implemented | Serialize/parse/verify `ip.lock` (a `Resolution` + per-core source + SHA-256) |
 | Cache | [cache.py](../src/hdl_ip_packager/cache.py) | implemented | Content-addressed local blob store (SHA-256 key, verify-on-read, atomic writes) |
 | Registry | [registry.py](../src/hdl_ip_packager/registry.py) | implemented (local + HTTP + writable) | Abstract `Registry` + local-dir/HTTP/writable-local backends + graph walker (Git/OCI tracked as issues) |
@@ -128,18 +128,29 @@ digest** of the core (the same SHA-256 the cache keys on and the registry serves
 ### Resolver *(implemented — [resolver.py](../src/hdl_ip_packager/resolver.py))*
 Input: the root `Manifest` + `available: Mapping[PackageRef, Sequence[Manifest]]`
 (the *manifests* of each package's known versions, so a candidate's own
-`[dependencies]` drive the transitive solve). Output: a `Resolution` = one `Vlnv`
-per package satisfying every constraint.
-- **Single version per package**, fail-on-conflict — HDL elaboration cannot host
-  two versions of the same module (unlike npm's nesting).
+`[dependencies]` and declared version *scheme* drive the transitive solve). Output:
+a `Resolution` exposing `vlnvs` / `by_ref` / `warnings`, usually one `Vlnv` per
+package and possibly more under `isolate_namespaces`.
+- **Compatibility unification (Cargo-style)** — dependents in the same compatibility
+  group (`compatibility_group`: same major for SemVer; for `0.y` the minor) unify to
+  the newest version satisfying them all. A diamond on `^1.0` + `^1.1` collapses to
+  one `1.1.x`.
+- **Conflict policy** — only a genuinely *incompatible* conflict (two majors, or two
+  exact pins of an `opaque` core) is governed by the `[resolution] on-conflict`
+  policy (`--on-conflict` overrides it): `fail_on_conflict` (default, raise),
+  `use_latest` (collapse to newest + warn), `isolate_namespaces` (keep all in the
+  lock/tree; `gen` refuses to emit two versions, since name-mangling is unbuilt).
+- **Version scheme** — `[package].scheme` is `semver` (default) or `opaque`; an
+  opaque package's dependents must pin an exact `=` version and every distinct pin is
+  its own group (honor-exact-pins). A non-SemVer `version` is rejected at parse.
 - **Newest-compatible** selection; pre-releases excluded unless a constraint's
   operand is itself a pre-release of the same core (the `VersionConstraint` rule).
-- **Backtracking search** over candidate sets (newest-first, constraints
-  accumulate as dependents are chosen; a candidate that conflicts with an
-  already-chosen version is rejected and the search falls back to older versions).
-  Pure, so it does no I/O; the registry/cache layer supplies `available`. Can be
-  lowered to a SAT/CDCL solver later without changing the contract (version
-  selection is NP-complete in general).
+- **Backtracking search** over candidate sets keyed per `(package, compatibility
+  group)` node (newest-first; a candidate conflicting with an already-chosen version
+  in its group is rejected and the search falls back); a post-search policy fold and
+  a reachability pass prune `use_latest` orphans. Pure, so it does no I/O; the
+  registry/cache layer supplies `available`. Can be lowered to a SAT/CDCL solver
+  later without changing the contract.
 
 ### Cache *(implemented — [cache.py](../src/hdl_ip_packager/cache.py))*
 `ContentAddressedCache` is a local blob store keyed by the SHA-256 of each blob's

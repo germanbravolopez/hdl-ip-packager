@@ -36,7 +36,15 @@ from .exceptions import (
 )
 from .ipxact import IPXACT_NAMESPACE, to_ipxact
 from .lockfile import LockedPackage, Lockfile, sha256_digest
-from .manifest import MANIFEST_SCHEMA_VERSION, Dependency, Fileset, Manifest, Target
+from .manifest import (
+    MANIFEST_SCHEMA_VERSION,
+    SUPPORTED_CONFLICT_POLICIES,
+    ConflictPolicy,
+    Dependency,
+    Fileset,
+    Manifest,
+    Target,
+)
 from .packaging import artifact_filename, extract_ipkg, manifest_from_ipkg, pack_core
 from .registry import (
     HttpRegistry,
@@ -48,17 +56,28 @@ from .registry import (
 from .resolver import Resolution, resolve
 from .sbom import CYCLONEDX_SPEC_VERSION, build_cyclonedx
 from .treeview import render_dependency_tree
-from .version import Version, VersionConstraint
+from .version import (
+    DEFAULT_VERSION_SCHEME,
+    SUPPORTED_VERSION_SCHEMES,
+    Version,
+    VersionConstraint,
+    VersionScheme,
+    compatibility_group,
+)
 from .vlnv import PackageRef, Vlnv
 
 __version__ = "0.8.0"
 
 __all__ = [
     "CYCLONEDX_SPEC_VERSION",
+    "DEFAULT_VERSION_SCHEME",
     "IPXACT_NAMESPACE",
     "MANIFEST_SCHEMA_VERSION",
+    "SUPPORTED_CONFLICT_POLICIES",
+    "SUPPORTED_VERSION_SCHEMES",
     "Backend",
     "BackendError",
+    "ConflictPolicy",
     "ContentAddressedCache",
     "CoreSource",
     "Dependency",
@@ -86,6 +105,7 @@ __all__ = [
     "Target",
     "Version",
     "VersionConstraint",
+    "VersionScheme",
     "Vlnv",
     "__version__",
     "add_dependency",
@@ -93,6 +113,7 @@ __all__ = [
     "available_from_registry",
     "build_cyclonedx",
     "build_eda_design",
+    "compatibility_group",
     "default_cache_root",
     "extract_ipkg",
     "get_backend",

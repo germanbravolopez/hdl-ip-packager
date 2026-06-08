@@ -12,9 +12,49 @@ import itertools
 import pytest
 
 from hdl_ip_packager.exceptions import InvalidConstraintError, InvalidVersionError
-from hdl_ip_packager.version import Version, VersionConstraint
+from hdl_ip_packager.version import Version, VersionConstraint, compatibility_group
 
 pytestmark = pytest.mark.unit
+
+
+class TestCompatibilityGroup:
+    def test_major_drives_group_above_one(self) -> None:
+        assert compatibility_group(Version.parse("1.4.2")) == ("semver", 1)
+        assert compatibility_group(Version.parse("2.0.0")) == ("semver", 2)
+        assert compatibility_group(Version.parse("1.0.0")) == compatibility_group(
+            Version.parse("1.9.9")
+        )
+
+    def test_zero_major_groups_by_minor(self) -> None:
+        assert compatibility_group(Version.parse("0.1.0")) == ("semver", 0, 1)
+        assert compatibility_group(Version.parse("0.1.5")) == ("semver", 0, 1)
+        assert compatibility_group(Version.parse("0.2.0")) != compatibility_group(
+            Version.parse("0.1.0")
+        )
+
+    def test_zero_zero_groups_by_patch(self) -> None:
+        assert compatibility_group(Version.parse("0.0.3")) == ("semver", 0, 0, 3)
+        assert compatibility_group(Version.parse("0.0.3")) != compatibility_group(
+            Version.parse("0.0.4")
+        )
+
+    def test_opaque_scheme_groups_per_version(self) -> None:
+        assert compatibility_group(Version.parse("1.0.0"), "opaque") == ("opaque", "1.0.0")
+        assert compatibility_group(Version.parse("1.0.0"), "opaque") != compatibility_group(
+            Version.parse("1.1.0"), "opaque"
+        )
+
+
+class TestExactConstraint:
+    def test_equals_is_exact(self) -> None:
+        c = VersionConstraint.parse("=1.2.3")
+        assert c.is_exact
+        assert c.exact_version == Version.parse("1.2.3")
+
+    def test_caret_and_range_are_not_exact(self) -> None:
+        assert not VersionConstraint.parse("^1.2.3").is_exact
+        assert not VersionConstraint.parse(">=1.0.0,<2.0.0").is_exact
+        assert VersionConstraint.parse("^1.2.3").exact_version is None
 
 
 class TestVersionParsing:

@@ -36,8 +36,11 @@ Implemented today:
   constraint grammar (`^`, `~`, `>=`, `<`, ranges, `*`) for dependency specs.
 - **Manifest (`ip.toml`)** — a TOML manifest per core declaring identity,
   metadata, filesets, dependencies, and build targets.
-- **Dependency resolver** — backtracking, newest-compatible resolution to one
-  `Vlnv` per package (fail-on-conflict, pre-release-aware).
+- **Dependency resolver** — backtracking, newest-compatible resolution that unifies
+  SemVer-compatible dependents (Cargo-style) and applies a configurable
+  `[resolution] on-conflict` policy to incompatible conflicts
+  (`fail_on_conflict`/`use_latest`/`isolate_namespaces`); scheme-aware
+  (`semver`/`opaque`), pre-release-aware.
 - **Lockfile (`ip.lock`)** — a deterministic, verifiable record of a resolve
   (exact VLNVs + source + SHA-256), written by `hdlpkg resolve`.
 - **Content-addressed cache + registries** — a SHA-256-keyed local cache with

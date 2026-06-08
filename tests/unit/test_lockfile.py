@@ -23,8 +23,7 @@ pytestmark = pytest.mark.unit
 
 
 def _resolution(*vlnvs: str) -> Resolution:
-    selected = {Vlnv.parse(v).ref: Vlnv.parse(v) for v in vlnvs}
-    return Resolution(selected=selected)
+    return Resolution(packages=tuple(Vlnv.parse(v) for v in vlnvs))
 
 
 def test_sha256_digest_is_canonical() -> None:

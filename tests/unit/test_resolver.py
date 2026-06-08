@@ -38,12 +38,24 @@ def available(*manifests: Manifest) -> dict[PackageRef, list[Manifest]]:
 
 
 def chosen(resolution: Resolution, ref: str) -> str:
-    return str(resolution.selected[PackageRef.parse(ref)])
+    """The single selected version string for *ref* (asserts exactly one)."""
+    selected = resolution.by_ref[PackageRef.parse(ref)]
+    assert len(selected) == 1, f"expected one version of {ref}, got {selected}"
+    return str(selected[0])
+
+
+def core_scheme(vlnv: str, scheme: str, deps: dict[str, str] | None = None) -> Manifest:
+    """Like :func:`core` but with an explicit version *scheme* (e.g. ``opaque``)."""
+    return Manifest(
+        vlnv=Vlnv.parse(vlnv),
+        version_scheme=scheme,  # type: ignore[arg-type]
+        dependencies=core(vlnv, deps).dependencies,
+    )
 
 
 def test_no_dependencies_resolves_to_empty() -> None:
     resolution = resolve(core("acme:lib:top:1.0.0"), {})
-    assert dict(resolution.selected) == {}
+    assert resolution.by_ref == {}
     assert resolution.vlnvs == ()
 
 
@@ -134,3 +146,99 @@ def test_vlnvs_property_is_sorted() -> None:
     index = available(core("acme:lib:a:1.0.0"), core("acme:lib:b:1.0.0"))
     resolution = resolve(root, index)
     assert [str(v) for v in resolution.vlnvs] == ["acme:lib:a:1.0.0", "acme:lib:b:1.0.0"]
+
+
+# --- conflict policies (multi-version coexistence) --------------------------
+
+
+def _conflict_index() -> dict[PackageRef, list[Manifest]]:
+    """The demo's soc_conflict: fifo wants bus ^1, legacy wants bus ^2."""
+    return available(
+        core("acme:ip:fifo:1.0.0", {"acme:common:bus": "^1.0.0"}),
+        core("acme:ip:legacy:1.0.0", {"acme:common:bus": "^2.0.0"}),
+        core("acme:common:bus:1.0.0"),
+        core("acme:common:bus:1.1.0"),
+        core("acme:common:bus:2.0.0"),
+    )
+
+
+def _conflict_root() -> Manifest:
+    return core("acme:soc:top:1.0.0", {"acme:ip:fifo": "^1.0.0", "acme:ip:legacy": "^1.0.0"})
+
+
+def test_incompatible_majors_fail_by_default() -> None:
+    with pytest.raises(ResolutionError, match="incompatible versions"):
+        resolve(_conflict_root(), _conflict_index())
+
+
+def test_isolate_namespaces_keeps_both_majors() -> None:
+    resolution = resolve(_conflict_root(), _conflict_index(), "isolate_namespaces")
+    bus = [str(v) for v in resolution.by_ref[PackageRef.parse("acme:common:bus")]]
+    assert bus == ["acme:common:bus:1.1.0", "acme:common:bus:2.0.0"]
+    assert any("isolate_namespaces" in w for w in resolution.warnings)
+
+
+def test_use_latest_collapses_to_newest_and_warns() -> None:
+    resolution = resolve(_conflict_root(), _conflict_index(), "use_latest")
+    assert chosen(resolution, "acme:common:bus") == "acme:common:bus:2.0.0"
+    assert any("use_latest" in w and "2.0.0" in w for w in resolution.warnings)
+
+
+def test_compatible_diamond_unifies_regardless_of_policy() -> None:
+    # fifo ^1.0 + arbiter ^1.1 are SemVer-compatible -> one shared bus, no warning.
+    root = core("acme:soc:top:1.0.0", {"acme:ip:fifo": "^1.0.0", "acme:ip:arbiter": "^1.0.0"})
+    index = available(
+        core("acme:ip:fifo:1.0.0", {"acme:common:bus": "^1.0.0"}),
+        core("acme:ip:arbiter:1.0.0", {"acme:common:bus": "^1.1.0"}),
+        core("acme:common:bus:1.0.0"),
+        core("acme:common:bus:1.1.0"),
+        core("acme:common:bus:2.0.0"),
+    )
+    resolution = resolve(root, index, "isolate_namespaces")
+    assert chosen(resolution, "acme:common:bus") == "acme:common:bus:1.1.0"
+    assert resolution.warnings == ()
+
+
+def test_policy_defaults_to_manifest_setting() -> None:
+    root = Manifest(
+        vlnv=Vlnv.parse("acme:soc:top:1.0.0"),
+        conflict_policy="isolate_namespaces",
+        dependencies=_conflict_root().dependencies,
+    )
+    resolution = resolve(root, _conflict_index())  # no explicit policy arg
+    assert len(resolution.by_ref[PackageRef.parse("acme:common:bus")]) == 2
+
+
+# --- opaque version scheme (honor-exact-pins) -------------------------------
+
+
+def test_opaque_distinct_pins_are_incompatible() -> None:
+    root = core("acme:soc:top:1.0.0", {"acme:x:vendor_ip": "=1.0.0", "acme:ip:wrap": "^1.0.0"})
+    index = available(
+        core("acme:ip:wrap:1.0.0", {"acme:x:vendor_ip": "=2.0.0"}),
+        core_scheme("acme:x:vendor_ip:1.0.0", "opaque"),
+        core_scheme("acme:x:vendor_ip:2.0.0", "opaque"),
+    )
+    # Two distinct exact pins of an opaque core do not unify -> conflict.
+    with pytest.raises(ResolutionError, match="incompatible versions"):
+        resolve(root, index)
+    resolution = resolve(root, index, "isolate_namespaces")
+    assert len(resolution.by_ref[PackageRef.parse("acme:x:vendor_ip")]) == 2
+
+
+def test_opaque_same_pin_unifies() -> None:
+    root = core("acme:soc:top:1.0.0", {"acme:x:vendor_ip": "=1.0.0", "acme:ip:wrap": "^1.0.0"})
+    index = available(
+        core("acme:ip:wrap:1.0.0", {"acme:x:vendor_ip": "=1.0.0"}),
+        core_scheme("acme:x:vendor_ip:1.0.0", "opaque"),
+        core_scheme("acme:x:vendor_ip:2.0.0", "opaque"),
+    )
+    resolution = resolve(root, index)
+    assert chosen(resolution, "acme:x:vendor_ip") == "acme:x:vendor_ip:1.0.0"
+
+
+def test_opaque_requires_exact_constraint() -> None:
+    root = core("acme:soc:top:1.0.0", {"acme:x:vendor_ip": "^1.0.0"})
+    index = available(core_scheme("acme:x:vendor_ip:1.0.0", "opaque"))
+    with pytest.raises(ResolutionError, match="exact '=' version"):
+        resolve(root, index)

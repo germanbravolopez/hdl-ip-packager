@@ -18,14 +18,15 @@ them to Archive. Convert relative dates to absolute (e.g. "June 2026").
 
 **Active branch**: `main`
 
-**Version**: `0.8.0` — the pre-1.0 completeness pass + backlog batch on top of the
-M8 SBOM work: reproducible lockfile-driven builds (`install --locked`/`gen
---locked`), `hdlpkg add`, the `ip.toml` `schema` key, pack/top hardening, the `tree`
-Windows fix, `resolve`/`install`/`tree --registry`, `Fileset.depend`, three more
-backends (Icarus/GHDL/Yosys), and Dependabot. Shipped as `0.8.0`, not `1.0.0`: the
-formats are still moving (multi-version lockfile shape and a possible `scheme` key are
-recorded as open issues) and the 1.0.0 stability gate (rc soak, OCI protocol,
-third-party consume) is not yet met. See the Release plan.
+**Version**: `0.8.0` released; `develop` now also carries the **versioning contract
+for the 1.0 freeze** — Cargo-style unification, a `[resolution] on-conflict` policy
+(`fail_on_conflict` default / `use_latest` / `isolate_namespaces`) that allows
+multi-version coexistence in the resolve/lock/tree (with `gen` refusing two versions),
+and the `[package].scheme` key (`semver` / `opaque`) with explicit non-SemVer
+rejection. With the resolver contract and the `ip.toml`/`ip.lock` format shapes now
+settled, the remaining gate to `1.0.0` is the **operational** half — the OCI registry
+protocol, a third-party publish/consume, and an `rc` soak — not the format churn that
+held it back. See the Release plan.
 
 **Stage**: Feature-complete for the roadmap (M1–M8) plus the pre-1.0 completeness
 pass; fully typed, linted, and unit-tested (268 passing tests, ~96% coverage):
@@ -34,8 +35,12 @@ pass; fully typed, linted, and unit-tested (268 passing tests, ~96% coverage):
 - **Identity** — `PackageRef` and `Vlnv` (`vendor:library:name:version`).
 - **Manifest** — `ip.toml` parsing/validation (`[package]`, `[dependencies]`,
   `[filesets]`, `[targets]`), with an optional `schema` version for a migration path.
-- **Resolver** — backtracking, newest-compatible dependency resolution (one `Vlnv`
-  per package, fail-on-conflict); pure, fed by an in-memory version index.
+- **Resolver** — backtracking, newest-compatible dependency resolution that unifies
+  SemVer-compatible dependents (Cargo-style) and applies a configurable
+  `[resolution] on-conflict` policy to an incompatible conflict
+  (`fail_on_conflict`/`use_latest`/`isolate_namespaces`, the last keeping multiple
+  versions per package); scheme-aware (`semver`/`opaque`); pure, fed by an in-memory
+  version index.
 - **Lockfile** — deterministic `ip.lock` (serialize/parse/verify a `Resolution`
   with per-core source + SHA-256), written by `hdlpkg resolve`.
 - **Cache** — content-addressed local blob store (SHA-256 key, verify-on-read,
@@ -59,11 +64,13 @@ pass; fully typed, linted, and unit-tested (268 passing tests, ~96% coverage):
 - **Tooling** — pytest (markers + coverage gate + foldable summary), ruff, mypy
   strict on `src/`, CI workflow, and a cross-platform test-summary renderer.
 
-**Next**: all roadmap milestones (M1–M8) are delivered; the remaining work toward
-`1.0.0` is the stability gate (see the Release plan) — frozen formats, an `rc` soak,
-the OCI protocol, and a third-party publish/consume — plus the open
-backends/signing and the newly recorded versioning issues (multi-version
-coexistence, unification semantics, non-SemVer schemes).
+**Next**: all roadmap milestones (M1–M8) are delivered and the versioning contract
+that was gating the format freeze is settled. The remaining work toward `1.0.0` is the
+**operational** stability gate (see the Release plan) — the OCI protocol, a
+third-party publish/consume, and an `rc` soak — plus the still-deferred external-
+service work (Git/OCI backends, Sigstore signing) and the two follow-on versioning
+items now reduced to their *physical* halves (name-mangling at `gen`, non-SemVer
+version *strings*).
 
 ---
 
@@ -129,14 +136,14 @@ _None._
 
 | Issue | File | Notes |
 |-------|------|-------|
+| Encrypted IP distribution (IEEE 1735) | `packaging.py`, `registry.py`, `manifest.py`, `cli.py` | **Future feature.** Let a producer distribute a core whose HDL source is **encrypted**, so a consumer can resolve/install/`gen` against it (the tool can drive a tool flow) without the source ever being readable on disk. Two distinct layers, decide which to build: **(a) Standard HDL IP encryption (IEEE 1735 / `pragma protect`)** — the cross-vendor norm. Each source file carries an encrypted envelope (a symmetric session key wrapped under each *tool vendor's* public key + AES/RSA-encrypted payload, IEEE 1735 v1/v2 with "rights" digests). The EDA tool decrypts at compile time; the packager's job is to **carry, not break** these envelopes — pack/`extract`/SBOM must treat an encrypted file as opaque, the deterministic-pack digest still pins ciphertext, and `gen` must not assume it can read the source. The tool would *not* implement the crypto itself (vendor keys live in the EDA tools); at most it could shell out to `vivado -encrypt`/`vlog +protect` to *produce* envelopes. **(b) At-rest/transport encryption of the `.ipkg`** — encrypt the whole artifact in the registry/cache for confidential distribution (e.g. age/GPG or an OCI-layer key), decrypted on `pull` with a consumer key. This is independent of HDL-tool semantics and simpler, but does **not** give the per-tool, compile-time protection (a) does. Open questions: where keys/recipients are declared (a `[package]`/`[encryption]` manifest key vs. out-of-band), how it interacts with content-addressing (the digest must pin what is *stored*), how the SBOM marks a component encrypted, and how `validate`/`info` behave when source is unreadable. Needs a real EDA tool (or an interop fixture) to test (a) honestly — defer like the Git/OCI/Sigstore work. |
 | Git-backed registry | `registry.py` | A `Registry` backend resolving cores from a Git channel (tags/refs). Deferred from M4: needs the `git` CLI + a remote to implement and test honestly. Mirror the `LocalDirectoryRegistry`/`HttpRegistry` shape. |
 | OCI artifact registry | `registry.py` | The differentiator backend: store/fetch cores as OCI artifacts (Docker-registry infra). Deferred from M4: needs a live OCI registry (or a mock) and the manifest/blob API; significant standalone work. |
 | Sigstore (cosign) artifact signing | `packaging.py`, `.github/workflows/` | The unbuilt half of M8: keyless signing of the `.ipkg` + SBOM and a verify path. Needs OIDC + Fulcio/Rekor (or a managed key) and a live transparency log to implement and test honestly — deferred like the Git/OCI backends. Checksums + SBOM already ship; this adds authenticity on top. |
 | Resolve/install over HTTP/OCI + `gen` from a registry | `cli.py`, `registry.py` | `resolve`/`install`/`tree --registry DIR` now consume a **local published** `LocalRegistry` directly (the producer->consumer loop closes for local registries). Remaining: wire `HttpRegistry` into `--registry` (resolve/install over HTTP), the OCI backend, and a fetch-then-extract so `gen` can build straight from a registry (it still needs loose sources via `--search`/`pull`). |
 | Validate IP-XACT against the official XSD | `ipxact.py`, tests | M7 emits well-formed, structurally-conventional 1685-2014 XML but does not validate against the Accellera XSD. Add an (optional, dev-only) schema-validation test (e.g. `xmlschema`) so structural drift is caught; consider IP-XACT 2022 and richer mapping (bus interfaces, parameters). |
-| Multi-version coexistence (two versions of one package in one design) | `resolver.py`, `lockfile.py`, `backends/edam.py`, `cli.py` | **Required future feature.** Today the resolver is **single-version-per-package**, fail-on-conflict. Some designs genuinely need *incompatible majors* of one IP to coexist — e.g. the external consumer demo's `soc_conflict/`: `fifo -> bus_pkg ^1` and `legacy -> bus_pkg ^2`, where v2 is a breaking change (it renamed `DATA_WIDTH` -> `BUS_DATA_BITS`), so no single version satisfies both. The work splits into two halves with very different risk: **(a) Bookkeeping (pure, safe):** the resolver/lockfile/`tree` keep *multiple* selected versions when ranges fall in SemVer-incompatible groups; `ip.lock` records more than one version of the same package. **(b) Physical coexistence at `gen` (the hard part):** SystemVerilog/Verilog put every `module`/`package` name in **one global namespace**, so two `package bus_pkg;` declarations collide at elaboration and the tool cannot know which one a consumer's `import bus_pkg::*` means. Making them build together requires **automatic name-mangling** — rename each version's declared symbols with a version-unique suffix (`bus_pkg` -> `bus_pkg__v1` / `bus_pkg__v2`) and rewrite *every reference* in each consumer to the version *that consumer resolved to*. That means editing HDL **source**, which the tool currently treats as opaque blobs; naive regex is unsafe (comments, macros, partial-name matches, hierarchical refs), so it likely needs an HDL-aware frontend (cf. the parked "source-unit tokenizing" backlog item). VHDL is slightly better placed (logical libraries give a namespace) but still needs `library`/`use`-clause rewriting. **Until (b) is built, `gen` must refuse to emit two versions of one package** with a clear message pointing at this limitation. Cargo/npm get multi-version "for free" only because their *compiler* namespaces each package automatically; HDL gives no such thing, so we must synthesize it. |
-| Unification semantics for resolution (sub-issue of multi-version) | `resolver.py` | A prerequisite decision for multi-version coexistence: **when does the resolver collapse to one version vs. keep several?** Two models: **Cargo-style (recommended)** — unify all dependents whose ranges are SemVer-compatible (same major) to the newest that satisfies them, and only allow *distinct* versions across *incompatible* majors (so the demo's `soc/` still resolves to a single `bus_pkg 1.1.0`; only `soc_conflict/` would get two). **Honor-exact-pins** — keep a distinct version per dependent whenever their selected versions differ at all, even within one major (more copies, more mangling, diverges from npm/Cargo norms). This choice changes the resolver contract and the lockfile shape, so it must be settled before (a) above lands. |
-| Non-SemVer / custom version schemes | `version.py`, `manifest.py`, `resolver.py` | The tool assumes **SemVer 2.0.0** everywhere (`Version` + `VersionConstraint` parse, precedence, caret/tilde ranges). Real HDL IP is frequently versioned otherwise: date/calendar-based (`2024.1` Vivado-style, `YY.MM` CalVer), monotonic revisions (`r3`, `rev12`), `git describe` (`1.2-14-gabcdef`), or opaque vendor tags. The tool must define what happens when a manifest's `version` is **not** SemVer. Behaviors to specify: **(1)** the strict default — reject a non-SemVer `version` at manifest-parse time with a clear `ManifestError` naming the offending string (better than mis-ordering it); **(2)** an opt-in `scheme` field in `[package]` (e.g. `scheme = "semver" \| "calver" \| "opaque"`) selecting the precedence/constraint engine, giving a forward-compatible migration path; **(3)** an **opaque/pinned** mode that supports only **exact-match** constraints (no ranges, no newest-compatible selection) so such cores can still be resolved and locked **deterministically** even without a total order. Implement at least (1) explicitly before the 1.0 format freeze; (2)/(3) can follow behind the `schema`/`scheme` keys. |
+| Physical multi-version coexistence at `gen` (name-mangling) | `backends/edam.py`, `cli.py` | The **bookkeeping** half of multi-version coexistence shipped (the resolver/lock/`tree` keep incompatible versions under `isolate_namespaces`), and `gen` **refuses** to emit two versions today. The remaining **physical** half: SystemVerilog/Verilog put every `module`/`package` name in one global namespace, so two `package bus_pkg;` collide at elaboration. Building them together needs **automatic name-mangling** — rename each version's declared symbols with a version-unique suffix and rewrite *every reference* in each consumer to its resolved version. That edits HDL **source** (currently opaque blobs); naive regex is unsafe, so it needs an HDL-aware frontend (cf. the parked "source-unit tokenizing" backlog item). VHDL is slightly better placed (logical libraries) but still needs `library`/`use`-clause rewriting. |
+| Genuinely non-SemVer version *strings* (calver / `r3` / opaque tags) | `version.py`, `vlnv.py`, `lockfile.py` | The `[package].scheme` key and the strict non-SemVer **rejection** shipped, and `scheme = "opaque"` gives exact-pin/honor-distinct resolution. What remains: letting an `opaque` (or future `calver`) package carry a version string that is **not** SemVer-shaped (`2024.1`, `r3`, `1.2-14-gabcdef`). That needs an `OpaqueVersion` token type threaded through `Vlnv`/lockfile round-trip and a scheme-aware `Vlnv.parse`, plus optional calver/monotonic precedence engines. The format key reserves this path; the engines can follow without a format break. |
 
 ---
 
@@ -151,6 +158,46 @@ _None._
 ---
 
 ## Completed Milestones
+
+### Versioning contract for the 1.0 freeze: conflict policies, multi-version, opaque scheme — June 2026
+- [x] **Settled the resolver contract that was gating the 1.0 format freeze** —
+  multi-version coexistence (bookkeeping), unification semantics, and the non-SemVer
+  scheme floor, the three Open Non-Blocking versioning issues. The resolver now
+  **always unifies SemVer-compatible dependents** (same major -> newest satisfying,
+  Cargo-style; a diamond on `^1.0` + `^1.1` still collapses to one `1.1.x`) and gives
+  the user a **conflict policy** for a genuinely *incompatible* conflict (two majors,
+  or two distinct exact pins of an `opaque` core), set by a root `ip.toml`
+  `[resolution] on-conflict` key with a `--on-conflict` CLI override:
+  - `fail_on_conflict` (default) — raise `ResolutionError` (preserves prior behaviour;
+    the demo's `soc_conflict/` still fails by default).
+  - `use_latest` — collapse to the newest of the conflicting versions, prune orphans,
+    and warn that lower requirements may be violated.
+  - `isolate_namespaces` — keep every incompatible version in the resolve/lock/tree
+    (multi-version **bookkeeping**, part (a) of the coexistence issue). Physical
+    coexistence (name-mangling, part (b)) is not built, so `gen` **refuses** to emit
+    two versions of one package with a clear message (`backends/edam.py`).
+- [x] **Opt-in `[package].scheme` version scheme** (`semver` default, or `opaque`) and
+  **explicit non-SemVer rejection**. A non-SemVer `package.version` is now rejected at
+  parse time with a clear `ManifestError` naming the string (the gating minimum
+  (1) of the non-SemVer issue). `scheme = "opaque"` treats versions as opaque tokens:
+  dependents must pin an exact `=` version and every distinct pin is its own
+  compatibility group (honor-exact-pins), so the resolver never assumes compatibility
+  it cannot verify. (Genuinely non-SemVer version *strings* — calver, `r3` — remain
+  open behind this key; opaque versions are SemVer-shaped for now.)
+- [x] **Implementation**: a pure `compatibility_group(version, scheme)` and
+  `VersionConstraint.is_exact`/`exact_version` in `version.py`; a grouped,
+  scheme-aware backtracking solver keyed per `(package, compatibility-group)` node
+  with a post-search policy fold and a reachability pass that prunes `use_latest`
+  orphans (`resolver.py`); `Resolution` now exposes `vlnvs`/`by_ref`/`warnings` and
+  may carry more than one version per package; `treeview.py` picks the per-edge
+  version and expands per VLNV; the CLI threads the policy through
+  resolve/install/tree/gen and prints warnings to stderr. Verified end to end against
+  the external consumer demo's `soc_conflict/` (default fails; `isolate` resolves two
+  `bus_pkg`; `gen` refuses; `use_latest` collapses to `2.0.0`) and `soc/` (diamond
+  still unifies to one `bus_pkg 1.1.0`). Files: `version.py`, `manifest.py`,
+  `resolver.py`, `treeview.py`, `backends/edam.py`, `cli.py`, `__init__.py`,
+  `tests/unit/test_version.py`, `test_resolver.py`, `test_treeview.py`,
+  `test_manifest.py`, `test_edam.py`, `tests/integration/test_conflict_policy_cli.py`.
 
 ### Hard gate: all PR checks must be green before merge — June 2026
 - [x] **Green CI is now an explicit, hard gate before any merge.** A real incident

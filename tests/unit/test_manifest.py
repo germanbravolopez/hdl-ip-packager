@@ -132,3 +132,36 @@ class TestManifestSchemaVersion:
     def test_non_integer_schema_is_rejected(self) -> None:
         with pytest.raises(ManifestError, match="'schema' must be an integer"):
             Manifest.from_str('schema = "1"\n' + _MINIMAL)
+
+
+class TestVersionScheme:
+    def test_default_scheme_is_semver(self) -> None:
+        assert Manifest.from_str(_MINIMAL).version_scheme == "semver"
+
+    def test_opaque_scheme_parses(self) -> None:
+        toml = '[package]\nvendor="a"\nlibrary="b"\nname="c"\nversion="0.1.0"\nscheme="opaque"\n'
+        assert Manifest.from_str(toml).version_scheme == "opaque"
+
+    def test_unknown_scheme_is_rejected(self) -> None:
+        toml = '[package]\nvendor="a"\nlibrary="b"\nname="c"\nversion="0.1.0"\nscheme="calver"\n'
+        with pytest.raises(ManifestError, match=r"Unsupported package\.scheme"):
+            Manifest.from_str(toml)
+
+    def test_non_semver_version_is_rejected_explicitly(self) -> None:
+        toml = '[package]\nvendor="a"\nlibrary="b"\nname="c"\nversion="2024.1"\n'
+        with pytest.raises(ManifestError, match="not a valid SemVer"):
+            Manifest.from_str(toml)
+
+
+class TestConflictPolicy:
+    def test_default_policy_is_fail(self) -> None:
+        assert Manifest.from_str(_MINIMAL).conflict_policy == "fail_on_conflict"
+
+    def test_explicit_policy_parses(self) -> None:
+        toml = _MINIMAL + '[resolution]\non-conflict = "isolate_namespaces"\n'
+        assert Manifest.from_str(toml).conflict_policy == "isolate_namespaces"
+
+    def test_unknown_policy_is_rejected(self) -> None:
+        toml = _MINIMAL + '[resolution]\non-conflict = "nope"\n'
+        with pytest.raises(ManifestError, match=r"Unsupported \[resolution\] on-conflict"):
+            Manifest.from_str(toml)

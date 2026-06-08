@@ -31,10 +31,54 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from functools import total_ordering
+from typing import Literal
 
 from .exceptions import InvalidConstraintError, InvalidVersionError
 
-__all__ = ["Version", "VersionConstraint"]
+__all__ = [
+    "DEFAULT_VERSION_SCHEME",
+    "SUPPORTED_VERSION_SCHEMES",
+    "Version",
+    "VersionConstraint",
+    "VersionScheme",
+    "compatibility_group",
+]
+
+# How a package's versions are interpreted for *compatibility* (see the resolver):
+#
+# * ``"semver"`` (default) -- full SemVer 2.0.0 precedence and caret/tilde ranges;
+#   dependents on the same major unify to the newest satisfying version.
+# * ``"opaque"`` -- versions are treated as opaque tokens with no compatibility
+#   relation: dependents must pin an exact ``=`` version and every distinct pin is
+#   its own compatibility group (no newest-compatible selection, no unification).
+#   This is for IP whose numbering does *not* imply SemVer compatibility. Version
+#   strings must still be SemVer-shaped for now (genuinely non-SemVer version
+#   *strings* -- calver, ``r3`` -- remain an open issue behind this key).
+VersionScheme = Literal["semver", "opaque"]
+SUPPORTED_VERSION_SCHEMES: tuple[VersionScheme, ...] = ("semver", "opaque")
+DEFAULT_VERSION_SCHEME: VersionScheme = "semver"
+
+
+def compatibility_group(version: Version, scheme: VersionScheme = "semver") -> tuple[object, ...]:
+    """Return the *compatibility group* key of *version* under *scheme*.
+
+    Two versions are in the same group iff a dependent on one may transparently be
+    satisfied by the other (so the resolver unifies them). Versions in *different*
+    groups are mutually incompatible and may coexist (subject to the conflict
+    policy). The key is hashable and only meaningful per package.
+
+    SemVer (Cargo semantics): the major for ``major >= 1``; for ``0.y.z`` the minor
+    (``^0.y`` allows patch changes only), and for ``0.0.z`` the patch. Opaque: the
+    version itself, so every distinct version is its own group.
+    """
+    if scheme == "opaque":
+        return ("opaque", str(version))
+    if version.major > 0:
+        return ("semver", version.major)
+    if version.minor > 0:
+        return ("semver", 0, version.minor)
+    return ("semver", 0, 0, version.patch)
+
 
 # Official SemVer 2.0.0 regex (anchored), adapted with named groups.
 _SEMVER_RE = re.compile(
@@ -228,6 +272,16 @@ class VersionConstraint:
         if op == "~":
             return [_Comparator(">=", version), _Comparator("<", _tilde_upper(version))]
         return [_Comparator(op, version)]
+
+    @property
+    def is_exact(self) -> bool:
+        """True if this constraint pins a single exact version (``=X.Y.Z``)."""
+        return len(self.comparators) == 1 and self.comparators[0].op == "="
+
+    @property
+    def exact_version(self) -> Version | None:
+        """The pinned version if this is an exact constraint, else ``None``."""
+        return self.comparators[0].version if self.is_exact else None
 
     def _prerelease_allowed(self, candidate: Version) -> bool:
         """A pre-release candidate is only allowed if a comparator targets its base triple."""

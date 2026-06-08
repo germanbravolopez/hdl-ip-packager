@@ -72,9 +72,10 @@ quick-find reference.
 | `tests/unit/test_manifest.py` | `ip.toml` happy paths + every validation error |
 | `tests/unit/test_scaffold.py` | `init` scaffolder: rendered manifest round-trips, validation errors |
 | `tests/unit/test_cli.py` | CLI commands, exit codes, output |
-| `tests/unit/test_resolver.py` | Dependency resolver: newest-compatible, transitive, diamond, conflict, pre-release, backtracking |
+| `tests/unit/test_resolver.py` | Dependency resolver: newest-compatible, transitive, diamond, conflict, pre-release, backtracking, conflict policies, opaque scheme |
 | `tests/unit/test_lockfile.py` | Lockfile model: round-trip, determinism, parse errors, checksum verification |
 | `tests/integration/test_resolve_cli.py` | `hdlpkg resolve` end to end on the bundled examples |
+| `tests/integration/test_conflict_policy_cli.py` | `on-conflict` policies end to end: fail / isolate / use_latest + `gen` refusing two versions |
 | `tests/integration/test_cache.py` | Content-addressed cache: round-trip, dedup, verify-on-read corruption |
 | `tests/integration/test_registry.py` | Local + HTTP registries, graph walker, `install` fetch-into-cache |
 | `tests/integration/test_packaging.py` | `.ipkg` pack determinism, round-trip, path-traversal guard |

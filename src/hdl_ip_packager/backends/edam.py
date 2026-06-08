@@ -33,6 +33,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import PurePath
 
+from ..exceptions import BackendError
 from ..manifest import Manifest
 from ..vlnv import PackageRef
 
@@ -150,6 +151,30 @@ def _dependency_fileset_names(manifest: Manifest) -> list[str]:
     return [name for name in manifest.filesets if name not in _TESTBENCH_FILESETS]
 
 
+def _reject_multiversion(dependencies: Sequence[CoreSource]) -> None:
+    """Refuse to build two versions of one package.
+
+    HDL puts every ``module``/``package`` name in one global namespace, so two
+    versions of a core collide at elaboration. Automatic name-mangling (the
+    physical half of multi-version coexistence) is not built, so ``gen`` stops here
+    with a clear message rather than emitting a design that cannot elaborate. The
+    resolver can still *record* the coexistence under ``isolate_namespaces``.
+    """
+    versions_by_ref: dict[PackageRef, set[str]] = {}
+    for core in dependencies:
+        versions_by_ref.setdefault(core.manifest.ref, set()).add(str(core.manifest.vlnv.version))
+    conflicted = {ref: vers for ref, vers in versions_by_ref.items() if len(vers) > 1}
+    if conflicted:
+        ref, vers = next(iter(sorted(conflicted.items(), key=lambda kv: str(kv[0]))))
+        listed = ", ".join(sorted(vers))
+        raise BackendError(
+            f"Cannot generate a design with two versions of {ref} ({listed}): HDL elaboration "
+            f"cannot host two versions of one package in a single namespace, and automatic "
+            f"name-mangling is not implemented. Resolve to a single version (e.g. set "
+            f"[resolution] on-conflict to 'use_latest') or split the build."
+        )
+
+
 def _topological_order(dependencies: Sequence[CoreSource]) -> list[CoreSource]:
     """Order *dependencies* so each core follows the deps it references (ties by VLNV)."""
     by_ref: dict[PackageRef, CoreSource] = {c.manifest.ref: c for c in dependencies}
@@ -195,6 +220,8 @@ def build_eda_design(
     if spec is None:
         known = ", ".join(sorted(root.manifest.targets)) or "(none)"
         raise ValueError(f"Unknown target {target!r}; the manifest defines: {known}.")
+
+    _reject_multiversion(dependencies)
 
     files: list[EdaFile] = []
     seen: set[str] = set()
