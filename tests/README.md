@@ -37,6 +37,7 @@ tests/
     ├── test_registry.py            local + HTTP registries, graph walk, install
     ├── test_packaging.py           .ipkg pack/extract determinism + safety
     ├── test_pack_cli.py            pack/publish/pull/yank loop
+    ├── test_e2e_lifecycle.py    full producer->consumer round trip: publish->resolve->gen->install->pull
     ├── test_examples.py         validates the bundled examples/ cores
     ├── test_gen_cli.py          hdlpkg gen over examples (resolve → render → write)
     ├── test_tree_cli.py         hdlpkg tree over examples
