@@ -1,11 +1,11 @@
 # Name-mangling — `mangle.py`
 
-Lets two versions of one SystemVerilog **package** coexist in a single `gen` build by
-rewriting each version's package name to a unique one. Pure module (no I/O): it
-operates on source text passed in, so the file work stays in the [CLI](cli.md).
+Lets two versions of one **package** (SystemVerilog or VHDL) coexist in a single `gen`
+build by rewriting each version's package name to a unique one. Pure module (no I/O):
+it operates on source text passed in, so the file work stays in the [CLI](cli.md).
 
 - **Source**: [src/hdl_ip_packager/mangle.py](../../src/hdl_ip_packager/mangle.py)
-- **Import**: `from hdl_ip_packager import rewrite_sv_packages, declared_packages, mangled_name, plan_package_mangling`
+- **Import**: `from hdl_ip_packager import rewrite_sv_packages, rewrite_vhdl_packages, declared_packages, mangled_name, plan_package_mangling`
 
 ## Why
 
@@ -19,33 +19,40 @@ resolver/lock/tree).
 
 ## Safety: only unambiguous package positions
 
-`rewrite_sv_packages(source, renames)` rewrites a name **only** where SystemVerilog
-syntax makes it unambiguously a package reference, so no parser is needed:
+A name is rewritten **only** where the HDL syntax makes it unambiguously a package
+reference, so no parser is needed. Each language has its own comment/string-aware
+scanner:
 
-- `package <name>` and `endpackage : <name>` declarations / labels,
-- `import <name>::…`,
-- `<name>::…` scoped references.
+- **`rewrite_sv_packages`** (SystemVerilog) — `package <name>` / `endpackage : <name>`
+  declarations, `import <name>::…`, and `<name>::…` scoped references; skips `//`,
+  `/* */`, and `"…"`.
+- **`rewrite_vhdl_packages`** (VHDL, case-insensitive) — `package <name>` /
+  `package body <name>` declarations, `end [package [body]] <name>` labels, and
+  `use work.<name>…` references; skips `--`, `/* */`, strings, and character literals.
 
-A comment/string-aware scanner skips `//` … , `/* … */`, and `"…"`, so a coincidental
-signal named `bus_pkg`, or the name inside a comment or string, is **never** touched.
+A coincidental signal named `bus_pkg`, or the name inside a comment or string, is
+**never** touched.
 
 **Not handled** (refused upstream with a clear `BackendError`): two versions of a
-*module*/interface (instantiation position is ambiguous without a real parser) and
-non-SystemVerilog (VHDL) sources. **Known limitation**: a macro that *constructs* a
-package name by token pasting is left untouched (and will not be mangled).
+*module*/interface (SV) or *entity* (VHDL) — instantiation position is ambiguous
+without a real parser — and an unknown source language. **Known limitations**: an SV
+macro that *constructs* a package name by token pasting, and a VHDL `use` against a
+named library other than `work` (everything is analyzed into `work`), are left
+untouched.
 
 ## API
 
 | Function | Description |
 |----------|-------------|
-| `mangled_name(name, version) -> str` | `("bus_pkg", 1.1.0)` → `"bus_pkg__v1_1_0"` (SV-safe). |
-| `declared_packages(source) -> tuple[str, ...]` | The `package <name>;` names declared in *source*. |
-| `declared_modules(source) -> tuple[str, ...]` | Module/interface/program names (for the refusal check). |
-| `rewrite_sv_packages(source, renames) -> str` | Rewrite package declarations + references per *renames*. |
+| `mangled_name(name, version) -> str` | `("bus_pkg", 1.1.0)` → `"bus_pkg__v1_1_0"` (HDL-safe). |
+| `declared_packages` / `declared_vhdl_packages` | The package names declared in an SV / VHDL source. |
+| `declared_modules` / `declared_vhdl_entities` | The SV module/interface / VHDL entity names (refusal check). |
+| `rewrite_sv_packages` / `rewrite_vhdl_packages` | Rewrite package declarations + references per *renames* (VHDL keys are lowercased). |
 | `plan_package_mangling(cores) -> ManglePlan` | Plan the renames for a set of `GenCore`s; raises `BackendError` for an unsupported conflict. |
 
-`GenCore` (a manifest + its already-read `GenSourceFile`s) and `ManglePlan` (the
-`rewritten` text per source key + a `renamed` report) are the planner's value types.
+`GenSourceFile` carries a `language` (the fileset kind); `GenCore` (a manifest + its
+already-read sources) and `ManglePlan` (the `rewritten` text per source key + a
+`renamed` report) are the planner's value types.
 The [CLI](cli.md) `gen` reads the sources, calls the planner, writes the rewritten
 tree into `<output>/src/`, and builds the design over it
 ([`build_eda_design(allow_multiversion=True)`](backends.md)).

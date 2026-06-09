@@ -590,13 +590,11 @@ def _gen_core(source: CoreSource) -> GenCore:
     """Read *source*'s fileset files into a :class:`GenCore` for mangling."""
     files: list[GenSourceFile] = []
     for fileset in source.manifest.filesets.values():
-        is_sv = normalize_file_type(fileset.type) in ("systemVerilog", "verilog")
+        language = normalize_file_type(fileset.type).lower()
         for rel in fileset.files:
             text = (Path(source.root) / rel).read_text(encoding="utf-8")
             files.append(
-                GenSourceFile(
-                    key=(str(source.manifest.vlnv), rel), text=text, is_systemverilog=is_sv
-                )
+                GenSourceFile(key=(str(source.manifest.vlnv), rel), text=text, language=language)
             )
     return GenCore(manifest=source.manifest, files=tuple(files))
 
@@ -635,7 +633,7 @@ def _print_mangle_report(plan: ManglePlan) -> None:
         return
     print(
         "warning: two versions of a package coexist (isolate_namespaces); the generated "
-        "SystemVerilog sources were name-mangled so they can build together:",
+        "HDL sources were name-mangled so they can build together:",
         file=sys.stderr,
     )
     for name, mangled in sorted(plan.renamed.items()):

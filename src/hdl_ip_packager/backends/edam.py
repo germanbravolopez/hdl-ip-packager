@@ -170,8 +170,8 @@ def _reject_multiversion(dependencies: Sequence[CoreSource]) -> None:
         raise BackendError(
             f"Cannot generate a design with two versions of {ref} ({listed}): HDL elaboration "
             f"cannot host two versions of one package in a single namespace. Generate under "
-            f"[resolution] on-conflict = 'isolate_namespaces' (which name-mangles SystemVerilog "
-            f"packages), resolve to a single version ('use_latest'), or split the build."
+            f"[resolution] on-conflict = 'isolate_namespaces' (which name-mangles SystemVerilog/"
+            f"VHDL packages), resolve to a single version ('use_latest'), or split the build."
         )
 
 

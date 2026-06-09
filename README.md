@@ -41,8 +41,8 @@ Implemented today:
   `[resolution] on-conflict` policy to incompatible conflicts
   (`fail_on_conflict`/`use_latest`/`isolate_namespaces`); scheme-aware
   (`semver`/`calver`/`monotonic`/`opaque`), pre-release-aware. Under
-  `isolate_namespaces`, `gen` name-mangles coexisting SystemVerilog packages so two
-  versions build together.
+  `isolate_namespaces`, `gen` name-mangles coexisting SystemVerilog/VHDL packages so
+  two versions build together.
 - **Lockfile (`ip.lock`)** — a deterministic, verifiable record of a resolve
   (exact VLNVs + source + SHA-256), written by `hdlpkg resolve`.
 - **Content-addressed cache + registries** — a SHA-256-keyed local cache with

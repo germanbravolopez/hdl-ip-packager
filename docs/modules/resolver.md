@@ -56,7 +56,7 @@ def resolve(
     prune orphans, and record a `warning`.
   - `isolate_namespaces` — keep every incompatible version in the resolve/lock/tree
     (multi-version bookkeeping). `gen` then [name-mangles](mangle.md) coexisting
-    SystemVerilog packages so they build together (module/VHDL coexistence is refused).
+    SystemVerilog/VHDL packages so they build together (module/entity coexistence is refused).
 - **Scheme-aware**: a package's `[package].scheme` chooses how its versions group —
   `semver` (by major), `calver` (by year), `monotonic` (one shared group), or
   `opaque` (each exact pin its own group; dependents must pin exactly). See
