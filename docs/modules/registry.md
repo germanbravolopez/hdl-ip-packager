@@ -127,6 +127,45 @@ The network backends are private by design. A per-host bearer token from
 from an internal registry without the cores ever being public. `registry_from_location`
 reads the token automatically; missing/wrong credentials fail closed.
 
+## Testing against a live registry (Zot / Docker)
+
+The integration tests cover both network backends against in-process mock servers, but
+you can also point `hdlpkg` at a **real** registry. Run one with no auth and use the
+plaintext `oci+http://` transport for local testing.
+
+**Zot** (a CNCF OCI registry; one binary, no Docker):
+```bash
+# download the single binary for your OS from https://github.com/project-zot/zot/releases
+zot serve zot-config.json     # minimal config: storage dir + 127.0.0.1:5000, no auth
+
+hdlpkg publish examples/fifo/ip.toml --registry oci+http://127.0.0.1:5000/ip
+hdlpkg publish examples/uart/ip.toml --registry oci+http://127.0.0.1:5000/ip
+hdlpkg resolve <consumer>/ip.toml   --registry oci+http://127.0.0.1:5000/ip
+hdlpkg pull acme:common:fifo:1.0.0  --registry oci+http://127.0.0.1:5000/ip --output ./fifo
+```
+
+**Docker** (`registry:2`, the CNCF distribution — what most production setups run):
+```bash
+docker run -d -p 5000:5000 --name reg registry:2
+hdlpkg publish examples/fifo/ip.toml --registry oci+http://127.0.0.1:5000/ip
+# ... resolve / install / pull exactly as above ...
+docker rm -f reg
+```
+
+**HTTP** (any `PUT`-capable server): a minimal bearer-auth reference server plus a
+scripted harness that runs the whole flow with assertions lives in the companion
+`hdlpkg-livetest/` project (see its README). Verify a published core really is an OCI
+artifact straight from the registry:
+```bash
+curl -s http://127.0.0.1:5000/v2/ip/acme/common/fifo/tags/list
+curl -s -H "Accept: application/vnd.oci.image.manifest.v1+json" \
+        http://127.0.0.1:5000/v2/ip/acme/common/fifo/manifests/1.0.0   # artifactType: .../vnd.hdlpkg.core.v1
+```
+
+For an **authenticated** registry (htpasswd, a managed cloud registry), see the
+token-exchange note below — `hdlpkg login` stores a bearer token that is presented
+directly today, which a no-auth or static-bearer registry accepts.
+
 ## Deferred backends
 
 A **Git-backed** registry channel is still designed but not implemented (it needs `git`
