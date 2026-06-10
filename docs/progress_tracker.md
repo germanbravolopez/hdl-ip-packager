@@ -18,7 +18,9 @@ them to Archive. Convert relative dates to absolute (e.g. "June 2026").
 
 **Active branch**: `main`
 
-**Version**: `0.8.0` released; `develop` now also carries the **versioning contract
+**Version**: **`1.0.0-rc.1`** cut — the first 1.0 release candidate, published to PyPI as a
+**pre-release** to start the **soak** (no `ip.toml`/`ip.lock`/CLI/registry-protocol change
+until promotion). It carries everything that landed since `0.8.0`: the **versioning contract
 for the 1.0 freeze** — Cargo-style unification, a `[resolution] on-conflict` policy
 (`fail_on_conflict` default / `use_latest` / `isolate_namespaces`) that allows
 multi-version coexistence in the resolve/lock/tree (with `gen` refusing two versions),
@@ -27,9 +29,11 @@ rejection, **and the operational distribution protocol** — HTTP + OCI registry
 behind one `registry_from_location` abstraction, with `hdlpkg login` auth (direct bearer
 **and** the OCI token-exchange, reusing `docker login`) for private, self-hosted registries.
 With the resolver contract, the `ip.toml`/`ip.lock` format shapes, and the registry/OCI
-protocol now settled, the remaining gate to `1.0.0` is narrow: a **third-party
-publish/consume** and a **`1.0.0-rc.1` soak** with no format changes — not the format or
-protocol churn that held it back. See the Release plan.
+protocol now settled, the path to the final `1.0.0` is just the soak: the **`1.0.0-rc.1`
+soak is now underway** (this candidate must hold with no format/CLI/protocol change), and a
+**third-party publish/consume** should validate this rc during the soak. A clean soak is
+promoted to `1.0.0`; any required format change resets it (and would ship as `0.9.0`). See
+the Release plan.
 
 **Stage**: Feature-complete for the roadmap (M1–M8) plus the pre-1.0 completeness
 pass; fully typed, linted, and tested (457 passing tests, ~95% coverage):
@@ -167,6 +171,21 @@ _None._
 ---
 
 ## Completed Milestones
+
+### Release 1.0.0-rc.1 — June 2026
+- [x] **Cut `1.0.0-rc.1`, the first 1.0 release candidate**, to **start the soak** toward the
+  final `1.0.0`. It bundles everything since `0.8.0`: the versioning contract for the 1.0
+  freeze (Cargo-style unification, the `[resolution] on-conflict` policy, SV+VHDL package
+  name-mangling, ordered non-SemVer schemes), and the operational distribution protocol
+  (local/HTTP/OCI registries behind `registry_from_location`, `hdlpkg login` with direct
+  bearer **and** OCI token-exchange + `docker login` reuse). Published to PyPI as a
+  **pre-release** (PEP 440 `1.0.0rc1`), so `pip install hdl-ip-packager` does not pick it up
+  unless `--pre`/an explicit pin is used; `release.yml` marks the GitHub release pre-release.
+  Bumped `pyproject.toml` + `__init__.py` to `1.0.0-rc.1`. **The soak rule**: this candidate
+  must hold with **no `ip.toml`/`ip.lock`/CLI/registry-protocol change**; a clean soak (ideally
+  including a genuine third-party publish/consume against this rc) is promoted to `1.0.0`, while
+  any required format change resets the soak and ships as `0.9.0` instead. Promotion to `1.0.0`
+  remains a deliberate, human-gated sign-off (not autonomous).
 
 ### OCI token-exchange auth flow (works against managed Harbor/cloud registries) — June 2026
 - [x] **`OciRegistry` now performs the Docker/OCI token-exchange dance**, so it
