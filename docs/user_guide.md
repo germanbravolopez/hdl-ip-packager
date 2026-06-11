@@ -144,7 +144,17 @@ hdlpkg init --vendor mycorp --library comm --name uart
 ```
 
 This writes a valid starter `ip.toml` (one `rtl` fileset, one `sim` target) that
-passes `validate` immediately. Then:
+passes `validate` immediately. A brand-new core defaults to SemVer `0.1.0`. If your
+IP uses a vendor or date version code that is not SemVer (e.g. `D5020204`), pick a
+scheme so `init` accepts it and records it in the manifest:
+
+```bash
+hdlpkg init --vendor mycorp --library comm --name uart \
+  --version D5020204 --scheme opaque    # or 'monotonic' for ordered build numbers
+```
+
+`--scheme` is one of `semver` (default), `calver`, `monotonic`, or `opaque`; it sets
+`[package].scheme` (see the version-scheme glossary entry above). Then:
 
 1. Add your sources under `rtl/` and list them in `[filesets.rtl]`.
 2. Declare dependencies under `[dependencies]` with version constraints — by hand,

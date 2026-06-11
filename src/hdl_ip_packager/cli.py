@@ -57,7 +57,11 @@ from .resolver import resolve as resolve_deps
 from .sbom import build_cyclonedx
 from .scaffold import DEFAULT_VERSION, ScaffoldOptions, render_manifest
 from .treeview import render_dependency_tree
-from .version import VersionConstraint
+from .version import (
+    DEFAULT_VERSION_SCHEME,
+    SUPPORTED_VERSION_SCHEMES,
+    VersionConstraint,
+)
 from .vlnv import PackageRef, Vlnv
 
 _REGISTRY_HELP = (
@@ -99,7 +103,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_init.add_argument("--library", help="VLNV library segment")
     p_init.add_argument("--name", help="VLNV name segment")
     p_init.add_argument(
-        "--version", default=DEFAULT_VERSION, help=f"SemVer (default: {DEFAULT_VERSION})"
+        "--version", default=DEFAULT_VERSION, help=f"version string (default: {DEFAULT_VERSION})"
+    )
+    p_init.add_argument(
+        "--scheme",
+        choices=SUPPORTED_VERSION_SCHEMES,
+        default=DEFAULT_VERSION_SCHEME,
+        help="how --version is interpreted: 'semver' (default), 'calver', 'monotonic', "
+        "or 'opaque' for vendor/date codes that are not SemVer (e.g. D5020204)",
     )
     p_init.add_argument("--description", default="", help="short core description")
     p_init.add_argument("--license", default="", help="SPDX license identifier")
@@ -380,6 +391,7 @@ def _cmd_init(args: argparse.Namespace) -> int:
         library=_require_field(args.library, "library", interactive),
         name=_require_field(args.name, "name", interactive),
         version=args.version,
+        scheme=args.scheme,
         description=args.description,
         license=args.license,
         top=args.top,

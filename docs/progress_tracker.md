@@ -36,7 +36,7 @@ promoted to `1.0.0`; any required format change resets it (and would ship as `0.
 the Release plan.
 
 **Stage**: Feature-complete for the roadmap (M1–M8) plus the pre-1.0 completeness
-pass; fully typed, linted, and tested (457 passing tests, ~95% coverage):
+pass; fully typed, linted, and tested (463 passing tests, ~95% coverage):
 - **Versioning** — SemVer 2.0.0 `Version` + `VersionConstraint` (caret/tilde/range
   grammar, pre-release precedence).
 - **Identity** — `PackageRef` and `Vlnv` (`vendor:library:name:version`).
@@ -171,6 +171,24 @@ _None._
 ---
 
 ## Completed Milestones
+
+### Soak finding: `hdlpkg init --scheme` for non-SemVer version codes — June 2026
+- [x] **`hdlpkg init` now exposes the version scheme**, closing a trial-feedback gap: a
+  third-party tester ran `hdlpkg init` with a vendor version code (`D5020204`) and hit
+  `error: Not a valid semantic version: 'D5020204'`, with nothing pointing at the
+  already-supported non-SemVer schemes. `init` hard-coded `Version.parse` and rendered a
+  scheme-less manifest, so the one front door could not author the `opaque`/`monotonic`/
+  `calver` cores the rest of the tool handles. Added an `init --scheme {semver,calver,
+  monotonic,opaque}` flag (threaded through `ScaffoldOptions.create` ->
+  `parse_version(version, scheme)`), which emits `[package].scheme` in the scaffold when
+  non-default, and made the SemVer parse error point at `[package].scheme` /
+  `init --scheme`. Files: `scaffold.py`, `cli.py`, `version.py`,
+  `tests/unit/test_scaffold.py`, `test_cli.py`; `docs/user_guide.md`. **Purely additive**
+  (a new optional flag + a friendlier message + emitting an already-frozen manifest key):
+  no change to `ip.toml`/`ip.lock` shape, lockfile, or registry protocol, and existing
+  `init` invocations are unchanged. Whether this rides into the final `1.0.0` or waits for
+  `1.0.1` — i.e. whether an additive CLI flag counts against the rc.1 soak — is a release
+  call to confirm at promotion; it does **not** reset the format soak.
 
 ### Release 1.0.0-rc.1 — June 2026
 - [x] **Cut `1.0.0-rc.1`, the first 1.0 release candidate**, to **start the soak** toward the
