@@ -56,6 +56,11 @@ hdlpkg install my_project/ip.toml --registry oci+http://<registry-host>:5000/ip 
 hdlpkg pull  you:demo:widget:0.1.0  --registry oci+http://<registry-host>:5000/ip --output ./widget
 ```
 
+To tear the registry down again:
+```bash
+docker rm -f reg
+```
+
 For a **private** registry, `hdlpkg login <location>` first (add `--username` for a
 registry that uses the OCI token-exchange). See the user guide's
 [*Sharing over a registry*](user_guide.md#sharing-over-a-registry-local-http-or-oci)
