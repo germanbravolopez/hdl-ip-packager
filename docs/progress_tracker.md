@@ -18,7 +18,11 @@ them to Archive. Convert relative dates to absolute (e.g. "June 2026").
 
 **Active branch**: `main`
 
-**Version**: **`0.9.0`** cut — the stable pre-1.0 release that **resets the `1.0.0-rc.1`
+**Version**: **`0.10.0`** cut — an **additive, docs-only** release over `0.9.0`: a generated
+`hdlpkg(1)` man page, now shipped in the wheel (`share/man/man1`) and sdist. It changes no
+on-disk format, CLI surface, or registry protocol, so it **continues** the `0.9.0` re-soak
+toward `1.0.0` rather than resetting it. Background on the soak (unchanged by this release):
+`0.9.0` was the stable pre-1.0 release that **reset the `1.0.0-rc.1`
 soak**. The `1.0.0-rc.1` candidate (a PyPI pre-release) was meant to freeze the formats, but
 the third-party trial surfaced a real `ip.toml` gap — `[filesets]` could only list explicit
 files, unworkable for a large generated/vendored tree — so `files` entries now also accept
@@ -172,6 +176,14 @@ _None._
 ---
 
 ## Completed Milestones
+
+### Release 0.10.0 — June 2026
+- [x] **Cut `0.10.0`**, an additive docs release: ships the generated `hdlpkg(1)` man page
+  (see the milestone below) in the wheel as packaged data (`share/man/man1/hdlpkg.1`) and in
+  the sdist, so `man hdlpkg` is available after a system/pipx install. No `ip.toml`/`ip.lock`/
+  CLI/registry-protocol change — it **continues** the `0.9.0` re-soak toward `1.0.0` rather
+  than resetting it. Bumped `pyproject.toml` + `__init__.py` to `0.10.0` (and regenerated
+  `man/hdlpkg.1`, whose `.TH` carries the version).
 
 ### `hdlpkg(1)` man page, generated from the CLI — June 2026
 - [x] **Added a full `man hdlpkg` manual**, generated so it cannot drift from the CLI. A
