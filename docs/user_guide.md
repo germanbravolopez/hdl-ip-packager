@@ -372,5 +372,7 @@ the same base works first; if Docker works, `hdlpkg` will.
 
 - [Module manual](modules/README.md) — the full per-module / per-command reference.
 - [CLI reference](modules/cli.md) — every command, flag, and exit code.
+- **Man page** — `man ./man/hdlpkg.1` (or install it so `man hdlpkg` works; see
+  [`man/README.md`](../man/README.md)).
 - [Architecture](architecture.md) — how the pieces fit and why.
 - [Progress tracker](progress_tracker.md) — what is implemented, what is planned.
